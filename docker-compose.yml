@@ -1,5 +1,6 @@
 version: '3.1'
 services:
+
   web:
     image: odoo:16.0
     depends_on:
@@ -10,16 +11,15 @@ services:
       - ./volumes/odoo/web-data:/var/lib/odoo
       - ./volumes/odoo/conf:/etc/odoo
       - ./addons:/mnt/extra-addons
-      
     environment:
-      - POSTGRES_PASSWORD=postgres
+      - HOST=db
+      - USER=odoo
+      - password=odoo
   db:
     image: postgres:15
     environment:
-      - Host=postgres.local
-      - ports=30007
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=odoo
       - POSTGRES_USER=odoo
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
