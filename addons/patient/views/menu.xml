@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <menuitem id="menu_patient_root" name="PATIENT" sequence="10" />
-
-  <menuitem id="menu_patient_operation" name="Operation" parent="menu_patient_root" sequence="10" />
-  
-  <menuitem id="menu_patients" name="Patients" parent="menu_patient_operation" sequence="10" />
+  <menuitem id="menu_patient_root"
+    name="Patients"
+    sequence="10"
+  />
 </odoo>
