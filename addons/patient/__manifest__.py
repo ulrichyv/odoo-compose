@@ -6,6 +6,7 @@
     'depends':['mail'],
     'data':[
         'views/menu.xml',  
+        'views/patient.xml'
     ],
     'development_status': 'alpha',
     'application': True,

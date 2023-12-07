@@ -1,12 +1,12 @@
 {
     'name':'commande',
-    'author':'mavou',
-    'website':'mavou.com',
+    'author':'ulrich',
+    'website':'odoo.tech',
     'sumary':'odoo16 Development',
-    'depends':['mail'],
+    'depends':['purchase','product'],
     'data':[
-    
-        'views/menu.xml',
+        'views/commande.xml',  
+       
     ],
     'development_status': 'alpha',
     'application': True,
