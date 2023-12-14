@@ -3,9 +3,9 @@
     'author':'ulrich',
     'website':'odoo.tech',
     'sumary':'odoo16 Development',
-    'depends':['mail'],
+    'depends':['mail','calendar'],
     'data':[
-        'views/menu.xml',  
+       
         'views/patient.xml'
     ],
     'development_status': 'alpha',

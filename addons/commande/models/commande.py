@@ -14,8 +14,8 @@ class Commande(models.Model):
     structure = fields.Char(string="structure")
     BC = fields.Char(string="N° BC")
     
-
-
-class CommandeLigne(models.Model):
-    _inherit = 'purchase.order.line'
+    
+   
+    
+    
     

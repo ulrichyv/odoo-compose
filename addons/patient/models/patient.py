@@ -6,8 +6,6 @@ import datetime
 
 class Patient(models.Model):
     _name = "patient"
-    _inherit = 'mail.thread'
-
     name = fields.Char(string='Name', required=True, tracking=True)
     age = fields.Integer(string="Age", tracking=True)
     gender = fields.Selection([("male", "Male"), ("female", "Female")], string="Gender", tracking=True)
@@ -54,7 +52,7 @@ class Patient(models.Model):
                 reminder_duration = datetime.timedelta(weeks=self.reminder_value)
             elif self.reminder_unit == 'months':
                 reminder_duration = datetime.timedelta(months=self.reminder_value)
-            reminder_time = current_time + reminder_duration
+            reminder_time = current_time 
             frequence = self.frequency
             # recuperation du nombre de fois qu'il doit prendre le medicament 
             for i in range(frequence):
@@ -65,6 +63,13 @@ class Patient(models.Model):
                      'body': '<p>Vous devez prendre les médicaments </p>',
                       'date': reminder_time,
                      })
+                calender = self.env['calendar.event'].create({
+                        'name': 'le patient ' + self.name,
+                        'description': 'prescription du ' + self.medicaments + " numero " + self.phone_number,
+                        'start': reminder_time,
+                         'stop': reminder_time + datetime.timedelta(hours=2),
+                        })
+                calender.alarm_ids
                # message.send()
 
  

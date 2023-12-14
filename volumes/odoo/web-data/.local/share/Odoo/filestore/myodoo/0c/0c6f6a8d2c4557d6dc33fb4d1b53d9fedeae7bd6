@@ -1,0 +1,5155 @@
+
+/*********************************************************************
+*  Filepath: /base/static/tests/test_ir_model_fields_translation.js  *
+*  Lines: 42                                                         *
+*********************************************************************/
+odoo.define('@base/../tests/test_ir_model_fields_translation', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+"use strict";
+
+const tour = require("web_tour.tour");
+
+function checkLoginColumn(translation) {
+    return [
+        tour.stepUtils.showAppsMenuItem(), {
+            content: "Settings",
+            trigger: 'a[data-menu-xmlid="base.menu_administration"]',
+            run: 'click',
+        }, {
+            content: "Open Users & Companies",
+            trigger: '[data-menu-xmlid="base.menu_users"]',
+            run: "click",
+        }, {
+            content: "Open Users",
+            trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
+            run: "click",
+        }, {
+            content: `Login column should be ${translation}`,
+            trigger: `[data-name="login"] span:contains("${translation}")`,
+        }
+    ]
+}
+
+tour.register('ir_model_fields_translation_tour', {
+    test: true,
+    url: '/web',
+}, checkLoginColumn('Identifiant'));
+
+tour.register('ir_model_fields_translation_tour2', {
+    test: true,
+    url: '/web',
+}, checkLoginColumn('Identifiant2'));
+
+return __exports;
+});
+;
+
+/******************************************************************
+*  Filepath: /web/static/tests/legacy/helpers/test_utils_file.js  *
+*  Lines: 158                                                     *
+******************************************************************/
+odoo.define('web.test_utils_file', function () {
+"use strict";
+
+/**
+ * FILE Test Utils
+ *
+ * This module defines various utility functions to help simulate events with
+ * files, such as drag-and-drop.
+ *
+ * Note that all methods defined in this module are exported in the main
+ * testUtils file.
+ */
+
+
+//------------------------------------------------------------------------------
+// Private functions
+//------------------------------------------------------------------------------
+
+/**
+ * Create a fake object 'dataTransfer', linked to some files, which is passed to
+ * drag and drop events.
+ *
+ * @param {Object[]} files
+ * @returns {Object}
+ */
+function _createFakeDataTransfer(files) {
+    return {
+        dropEffect: 'all',
+        effectAllowed: 'all',
+        files,
+        getData: function () {
+            return files;
+        },
+        items: [],
+        types: ['Files'],
+    };
+}
+
+//------------------------------------------------------------------------------
+// Public functions
+//------------------------------------------------------------------------------
+
+/**
+ * Create a file object, which can be used for drag-and-drop.
+ *
+ * @param {Object} data
+ * @param {string} data.name
+ * @param {string} data.content
+ * @param {string} data.contentType
+ * @returns {Promise<Object>} resolved with file created
+ */
+function createFile(data) {
+    // Note: this is only supported by Chrome, and does not work in Incognito mode
+    return new Promise(function (resolve, reject) {
+        var requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+        if (!requestFileSystem) {
+            throw new Error('FileSystem API is not supported');
+        }
+        requestFileSystem(window.TEMPORARY, 1024 * 1024, function (fileSystem) {
+            fileSystem.root.getFile(data.name, { create: true }, function (fileEntry) {
+                fileEntry.createWriter(function (fileWriter) {
+                    fileWriter.onwriteend = function (e) {
+                        fileSystem.root.getFile(data.name, {}, function (fileEntry) {
+                            fileEntry.file(function (file) {
+                                resolve(file);
+                            });
+                        });
+                    };
+                    fileWriter.write(new Blob([ data.content ], { type: data.contentType }));
+                });
+            });
+        });
+    });
+}
+
+/**
+ * Drag a file over a DOM element
+ *
+ * @param {$.Element} $el
+ * @param {Object} file must have been created beforehand (@see createFile)
+ */
+function dragoverFile($el, file) {
+    var ev = new Event('dragover', { bubbles: true });
+    Object.defineProperty(ev, 'dataTransfer', {
+        value: _createFakeDataTransfer(file),
+    });
+    $el[0].dispatchEvent(ev);
+}
+
+/**
+ * Drop a file on a DOM element.
+ *
+ * @param {$.Element} $el
+ * @param {Object} file must have been created beforehand (@see createFile)
+ */
+function dropFile($el, file) {
+    var ev = new Event('drop', { bubbles: true, });
+    Object.defineProperty(ev, 'dataTransfer', {
+        value: _createFakeDataTransfer([file]),
+    });
+    $el[0].dispatchEvent(ev);
+}
+
+/**
+ * Drop some files on a DOM element.
+ *
+ * @param {$.Element} $el
+ * @param {Object[]} files must have been created beforehand (@see createFile)
+ */
+function dropFiles($el, files) {
+    var ev = new Event('drop', { bubbles: true, });
+    Object.defineProperty(ev, 'dataTransfer', {
+        value: _createFakeDataTransfer(files),
+    });
+    $el[0].dispatchEvent(ev);
+}
+
+/**
+ * Set files in a file input
+ *
+ * @param {DOM.Element} el
+ * @param {Object[]} files must have been created beforehand
+ *   @see testUtils.file.createFile
+ */
+function inputFiles(el, files) {
+    // could not use _createFakeDataTransfer as el.files assignation will only
+    // work with a real FileList object.
+    const dataTransfer = new window.DataTransfer();
+    for (const file of files) {
+        dataTransfer.items.add(file);
+    }
+    el.files = dataTransfer.files;
+    /**
+     * Changing files programatically is not supposed to trigger the event but
+     * it does in Chrome versions before 73 (which is on runbot), so in that
+     * case there is no need to make a manual dispatch, because it would lead to
+     * the files being added twice.
+     */
+    const versionRaw = navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./);
+    const chromeVersion = versionRaw ? parseInt(versionRaw[2], 10) : false;
+    if (!chromeVersion || chromeVersion >= 73) {
+        el.dispatchEvent(new Event('change'));
+    }
+}
+
+//------------------------------------------------------------------------------
+// Exposed API
+//------------------------------------------------------------------------------
+
+return {
+    createFile: createFile,
+    dragoverFile: dragoverFile,
+    dropFile: dropFile,
+    dropFiles,
+    inputFiles,
+};
+
+});
+;
+
+/**************************************************************
+*  Filepath: /mail/static/tests/tours/discuss_public_tour.js  *
+*  Lines: 36                                                  *
+**************************************************************/
+odoo.define('@mail/../tests/tours/discuss_public_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+const tour = require('web_tour.tour');
+
+tour.register('mail/static/tests/tours/discuss_public_tour.js', {
+    test: true,
+}, [{
+    trigger: '.o_DiscussPublicView',
+    extraTrigger: '.o_ThreadView',
+}, {
+    content: "Check that we are on channel page",
+    trigger: '.o_ThreadView',
+    run() {
+        if (!window.location.pathname.startsWith('/discuss/channel')) {
+            console.error('Did not automatically redirect to channel page');
+        }
+        // Wait for modules to be loaded or failed for the next step
+        odoo.__DEBUG__.didLogInfo.then(() => {
+            const { missing, failed, unloaded } = odoo.__DEBUG__.jsModules;
+            if ([missing, failed, unloaded].some(arr => arr.length)) {
+                console.error("Couldn't load all JS modules.", JSON.stringify({ missing, failed, unloaded }));
+            }
+            document.body.classList.add('o_mail_channel_public_modules_loaded');
+        });
+    },
+    extraTrigger: '.o_mail_channel_public_modules_loaded',
+}, {
+    content: "Wait for all modules loaded check in previous step",
+    trigger: '.o_mail_channel_public_modules_loaded',
+}]);
+
+return __exports;
+});
+;
+
+/*********************************************************************
+*  Filepath: /mail/static/tests/tours/mail_channel_as_guest_tour.js  *
+*  Lines: 37                                                         *
+*********************************************************************/
+odoo.define('@mail/../tests/tours/mail_channel_as_guest_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+const tour = require('web_tour.tour');
+
+tour.register('mail/static/tests/tours/mail_channel_as_guest_tour.js', {
+    test: true,
+}, [{
+    content: "Click join",
+    trigger: '.o_WelcomeView_joinButton',
+    extraTrigger: '.o_ThreadView',
+}, {
+    content: "Check that we are on channel page",
+    trigger: '.o_ThreadView',
+    run() {
+        if (!window.location.pathname.startsWith('/discuss/channel')) {
+            console.error('Clicking on join button did not redirect to channel page');
+        }
+        // Wait for modules to be loaded or failed for the next step
+        odoo.__DEBUG__.didLogInfo.then(() => {
+            const { missing, failed, unloaded } = odoo.__DEBUG__.jsModules;
+            if ([missing, failed, unloaded].some(arr => arr.length)) {
+                console.error("Couldn't load all JS modules.", JSON.stringify({ missing, failed, unloaded }));
+            }
+            document.body.classList.add('o_mail_channel_as_guest_tour_modules_loaded');
+        });
+    },
+    extraTrigger: '.o_mail_channel_as_guest_tour_modules_loaded',
+}, {
+    content: "Wait for all modules loaded check in previous step",
+    trigger: '.o_mail_channel_as_guest_tour_modules_loaded',
+}]);
+
+return __exports;
+});
+;
+
+/***********************************************************************
+*  Filepath: /mail/static/tests/tours/mail_full_composer_test_tour.js  *
+*  Lines: 94                                                           *
+***********************************************************************/
+odoo.define('@mail/../tests/tours/mail_full_composer_test_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+const {
+    createFile,
+    inputFiles,
+} = require('web.test_utils_file');
+
+const tour = require('web_tour.tour');
+
+/**
+ * This tour depends on data created by python test in charge of launching it.
+ * It is not intended to work when launched from interface. It is needed to test
+ * an action (action manager) which is not possible to test with QUnit.
+ * @see mail/tests/test_mail_full_composer.py
+ */
+tour.register('mail/static/tests/tours/mail_full_composer_test_tour.js', {
+    test: true,
+}, [{
+    content: "Click on Send Message",
+    trigger: '.o_ChatterTopbar_buttonSendMessage',
+}, {
+    content: "Write something in composer",
+    trigger: '.o_ComposerTextInput_textarea',
+    run: 'text blahblah',
+}, {
+    content: "Add one file in composer",
+    trigger: '.o_Composer_buttonAttachment',
+    async run() {
+        const file = await createFile({
+            content: 'hello, world',
+            contentType: 'text/plain',
+            name: 'text.txt',
+        });
+        const messaging = await odoo.__DEBUG__.messaging;
+        const uploader = messaging.models['ComposerView'].all()[0].fileUploader;
+        inputFiles(
+            uploader.fileInput,
+            [file]
+        );
+    },
+}, {
+    content: "Open full composer",
+    trigger: '.o_Composer_buttonFullComposer',
+    extra_trigger: '.o_AttachmentCard:not(.o-isUploading)' // waiting the attachment to be uploaded
+}, {
+    content: "Check the earlier provided attachment is listed",
+    trigger: '.o_AttachmentCard[title="text.txt"]',
+    run() {},
+}, {
+    content: "Check subject is autofilled",
+    trigger: '[name="subject"] input',
+    run() {
+        const subjectValue = document.querySelector('[name="subject"] input').value;
+        if (subjectValue !== "Re: Test User") {
+            console.error(
+                `Full composer should have "Re: Test User" in subject input (actual: ${subjectValue})`
+            );
+        }
+    },
+}, {
+    content: "Check composer content is kept",
+    trigger: '.o_field_html[name="body"]',
+    run() {
+        const bodyContent = document.querySelector('.o_field_html[name="body"]').textContent;
+        if (!bodyContent.includes("blahblah")) {
+            console.error(
+                `Full composer should contain text from small composer ("blahblah") in body input (actual: ${bodyContent})`
+            );
+        }
+    },
+}, {
+    content: "Open templates",
+    trigger: '.o_field_widget[name="template_id"] input',
+}, {
+    content: "Check a template is listed",
+    in_modal: false,
+    trigger: '.ui-autocomplete .ui-menu-item a:contains("Test template")',
+    run() {},
+}, {
+    content: "Send message",
+    trigger: '.o_mail_send',
+}, {
+    content: "Check message is shown",
+    trigger: '.o_Message:contains("blahblah")',
+}, {
+    content: "Check message contains the attachment",
+    trigger: '.o_Message .o_AttachmentCard_filename:contains("text.txt")',
+}]);
+
+return __exports;
+});
+;
+
+/***********************************************************************
+*  Filepath: /mail/static/tests/tours/user_modify_own_profile_tour.js  *
+*  Lines: 32                                                           *
+***********************************************************************/
+odoo.define('@mail/../tests/tours/user_modify_own_profile_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+const tour = require('web_tour.tour');
+
+/**
+ * Verify that a user can modify their own profile information.
+ */
+tour.register('mail/static/tests/tours/user_modify_own_profile_tour.js', {
+    test: true,
+}, [{
+    content: 'Open user account menu',
+    trigger: '.o_user_menu button',
+}, {
+    content: "Open preferences / profile screen",
+    trigger: '[data-menu=settings]',
+}, {
+    content: "Update the email address",
+    trigger: 'div[name="email"] input',
+    run: 'text updatedemail@example.com',
+}, {
+    content: "Save the form",
+    trigger: 'button[name="preference_save"]',
+}, {
+    content: "Wait until the modal is closed",
+    trigger: 'body:not(.modal-open)',
+}]);
+
+return __exports;
+});
+;
+
+/***************************************************
+*  Filepath: /portal/static/tests/tours/portal.js  *
+*  Lines: 22                                       *
+***************************************************/
+odoo.define('portal.tour', function (require) {
+'use strict';
+
+var tour = require("web_tour.tour");
+
+tour.register('portal_load_homepage', {
+    test: true,
+    url: '/my',
+},
+    [
+        {
+            content: "Check portal is loaded",
+            trigger: 'a[href*="/my/account"]:contains("Edit"):first',
+        },
+        {
+            content: "Load my account details",
+            trigger: 'input[value="Joel Willis"]'
+        }
+    ]
+);
+
+});
+;
+
+/*******************************************************************************
+*  Filepath: /account/static/tests/tours/account_dashboard_setup_bar_tests.js  *
+*  Lines: 42                                                                   *
+*******************************************************************************/
+odoo.define('account.dashboard.setup.tour', function (require) {
+    "use strict";
+
+    var core = require('web.core');
+    var tour = require('web_tour.tour');
+
+    var _t = core._t;
+
+    tour.register('account_render_report', {
+        test: true,
+        url: '/web',
+    }, [tour.stepUtils.showAppsMenuItem(),
+    {
+        id: 'account_menu_click',
+        trigger: '.o_app[data-menu-xmlid="account.menu_finance"]',
+        position: 'bottom',
+    }, {
+        trigger: '.o_data_row:first .o_data_cell',
+        extra_trigger: '.breadcrumb',
+    }, {
+        trigger: '.o_control_panel button:contains("' + _t('Print') + '")',
+    }, {
+        trigger: '.o_control_panel .o-dropdown--menu span:contains("' + _t('Invoices without Payment') + '")',
+    }, {
+        trigger: 'iframe .o_report_layout_standard h2',
+        content: 'Primary color is correct',
+        run: function () {
+            if (this.$anchor.css('color') !== "rgb(18, 52, 86)") {
+                console.error('The primary color should be the one set on the company.');
+            }
+        },
+    }, {
+        trigger: 'iframe .o_report_layout_standard #informations div strong',
+        content: 'Secondary color is correct',
+        run: function () {
+            if (this.$anchor.css('color') !== "rgb(120, 145, 1)") {
+                console.error('The secondary color should be the one set on the company.');
+            }
+        },
+    }
+        ]);
+});
+;
+
+/*************************************************************
+*  Filepath: /account/static/tests/tours/tax_group_tests.js  *
+*  Lines: 138                                                *
+*************************************************************/
+odoo.define('@account/../tests/tours/tax_group_tests', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module alias=account.tax.group.tour.tests */
+"use strict";
+
+const tour = require('web_tour.tour');
+
+tour.register('account_tax_group', {
+    test: true,
+    url: "/web",
+}, [tour.stepUtils.showAppsMenuItem(),
+    {
+        id: 'account_menu_click',
+        content: "Go to Invoicing",
+        trigger: '.o_app[data-menu-xmlid="account.menu_finance"]',
+    },
+    {
+        content: "Go to Vendors",
+        trigger: 'span:contains("Vendors")',
+    },
+    {
+        content: "Go to Bills",
+        trigger: 'a:contains("Bills")',
+    },
+    {
+        extra_trigger: '.breadcrumb:contains("Bills")',
+        content: "Create new bill",
+        trigger: '.o_list_button_add',
+    },
+    // Set a vendor
+    {
+        content: "Add vendor",
+        trigger: 'div.o_field_widget.o_field_res_partner_many2one[name="partner_id"] div input',
+        run: 'text Azure Interior',
+    },
+    {
+        content: "Valid vendor",
+        trigger: '.ui-menu-item a:contains("Azure Interior")',
+    },
+    // Add First product
+    {
+        content: "Add items",
+        trigger: 'div[name="invoice_line_ids"] .o_field_x2many_list_row_add a:contains("Add a line")',
+    },
+    {
+        content: "Select input",
+        trigger: 'div[name="invoice_line_ids"] .o_selected_row .o_list_many2one[name="product_id"] input',
+    },
+    {
+        content: "Type item",
+        trigger: 'div[name="invoice_line_ids"] .o_selected_row .o_list_many2one[name="product_id"] input',
+        run: "text Corner Desk Right Sit",
+    },
+    {
+        content: "Valid item",
+        trigger: '.ui-menu-item-wrapper:contains("Corner Desk Right Sit")',
+    },
+    // Save account.move
+    {
+        content: "Save the account move",
+        trigger: '.o_form_button_save',
+    },
+    ...tour.stepUtils.saveForm(),
+    // Edit tax group amount
+    {
+        content: "Edit tax group amount",
+        trigger: '.o_tax_group_edit',
+    },
+    {
+        content: "Modify the input value",
+        trigger: '.o_tax_group_edit_input input',
+        run: function (actions) {
+            $('.o_tax_group_edit_input input').val(200);
+            $('.o_tax_group_edit_input input').select();
+            $('.o_tax_group_edit_input input').blur();
+        },
+    },
+    // Check new value for total (with modified tax_group_amount).
+    {
+        content: "Valid total amount",
+        trigger: 'span[name="amount_total"]:contains("800")',
+    },
+    // Modify the quantity of the object
+    {
+        content: "Select item quantity",
+        trigger: 'div[name="invoice_line_ids"] tbody tr.o_data_row .o_list_number[name="quantity"]',
+    },
+    {
+        content: "Change item quantity",
+        trigger: 'div[name="invoice_line_ids"] tbody tr.o_data_row .o_list_number[name="quantity"] input',
+        run: 'text 2',
+    },
+    {
+        content: "Valid the new value",
+        trigger: 'div[name="invoice_line_ids"] tbody tr.o_data_row .o_list_number[name="quantity"] input',
+        run: function (actions) {
+            let keydownEvent = jQuery.Event('keydown');
+            keydownEvent.which = 13;
+            this.$anchor.trigger(keydownEvent);
+        },
+    },
+    // Save form
+    {
+        content: "Save the account move",
+        trigger: '.o_form_button_save',
+    },
+    ...tour.stepUtils.saveForm(),
+    // Check new tax group value
+    {
+        content: "Check new value of tax group",
+        trigger: '.o_tax_group_amount_value:contains("120")',
+    },
+    {
+        content: "Edit tax value",
+        trigger: '.o_tax_group_edit_input input',
+        run: 'text 2'
+    },
+    {
+        content: "Check new value of total",
+        trigger: '.oe_subtotal_footer_separator:contains("1,202")',
+    },
+    {
+        content: "Discard changes",
+        trigger: '.o_form_button_cancel',
+    },
+    {
+        content: "Check tax value is reset",
+        trigger: '.o_tax_group_amount_value:contains("120")',
+    },
+]);
+
+return __exports;
+});
+
+odoo.define(`account.tax.group.tour.tests`, async function(require) {
+                        return require('@account/../tests/tours/tax_group_tests')[Symbol.for("default")];
+                        });
+;
+
+/*********************************************************
+*  Filepath: /sale/static/tests/tours/sale_signature.js  *
+*  Lines: 51                                             *
+*********************************************************/
+odoo.define('sale.tour_sale_signature', function (require) {
+'use strict';
+
+var tour = require('web_tour.tour');
+
+// This tour relies on data created on the Python test.
+tour.register('sale_signature', {
+    test: true,
+    url: '/my/quotes',
+},
+[
+    {
+        content: "open the test SO",
+        trigger: 'a:containsExact("test SO")',
+    },
+    {
+        content: "click sign",
+        trigger: 'a:contains("Sign")',
+    },
+    {
+        content: "check submit is enabled",
+        trigger: '.o_portal_sign_submit:enabled',
+        run: function () {},
+    },
+    {
+        content: "click select style",
+        trigger: '.o_web_sign_auto_select_style a',
+    },
+    {
+        content: "click style 4",
+        trigger: '.o_web_sign_auto_font_selection a:eq(3)',
+    },
+    {
+        content: "click submit",
+        trigger: '.o_portal_sign_submit:enabled',
+    },
+    {
+        content: "check it's confirmed",
+        trigger: '#quote_content:contains("Thank You")',
+    }, {
+        trigger: '#quote_content',
+        run: function () {
+            window.location.href = window.location.origin + '/web';
+        },  // Avoid race condition at the end of the tour by returning to the home page.
+    },
+    {
+        trigger: 'nav',
+        run: function() {},
+    }
+]);
+});
+;
+
+/************************************************************
+*  Filepath: /calendar/static/tests/tours/calendar_tour.js  *
+*  Lines: 161                                               *
+************************************************************/
+odoo.define('@calendar/../tests/tours/calendar_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+const tour = require('web_tour.tour');
+
+const todayDate = function() {
+    let now = new Date();
+    let year = now.getFullYear();
+    let month = String(now.getMonth() + 1).padStart(2, '0');
+    let day = String(now.getDate()).padStart(2, '0');
+
+    return `${month}/${day}/${year} 10:00:00`;
+};
+
+tour.register('calendar_appointments_hour_tour', {
+    url: '/web',
+    test: true,
+}, [
+    tour.stepUtils.showAppsMenuItem(),
+    {
+        trigger: '.o_app[data-menu-xmlid="calendar.mail_menu_calendar"]',
+        content: 'Open Calendar',
+        run: 'click',
+    },
+    {
+        trigger: '.o-calendar-button-new',
+        content: 'Create a new event',
+        run: 'click',
+    },
+    {
+        trigger: '#name',
+        content: 'Give a name to the new event',
+        run: 'text TEST EVENT',
+    },
+    {
+        trigger: '#start',
+        content: 'Give a date to the new event',
+        run: `text ${todayDate()}`,
+    },
+    {
+        trigger: '.fa-cloud-upload',
+        content: 'Save the new event',
+        run: 'click',
+    },
+    {
+        trigger: '.dropdown-item:contains("Calendar")',
+        content: 'Go back to Calendar view',
+        run: 'click',
+    },
+    {
+        trigger: '.dropdown-toggle:contains("Week")',
+        content: 'Click to change calendar view',
+        run: 'click',
+    },
+    {
+        trigger: '.dropdown-item:contains("Month")',
+        content: 'Change the calendar view to Month',
+        run: 'click',
+    },
+    {
+        trigger: '.fc-day-header:contains("Monday")',
+        content: 'Change the calendar view to week',
+    },
+    {
+        trigger: '.fc-time:contains("10:00")',
+        content: 'Check the time is properly displayed',
+    },
+    {
+        trigger: '.o_event_title:contains("TEST EVENT")',
+        content: 'Check the event title',
+    },
+]);
+
+tour.register('test_calendar_delete_tour', {
+    test: true,
+},
+[
+    {
+        content: 'Select filter (everybody)',
+        trigger: 'div[data-value="all"] input',
+    },
+    {
+        content: 'Click on the event (focus + waiting)',
+        trigger: 'a .fc-content:contains("Test Event")',
+        async run() {
+            $('a .fc-content:contains("Test Event")').click();
+            await new Promise((r) => setTimeout(r, 1000));
+            $('a .fc-content:contains("Test Event")').click();
+        }
+    },
+    {
+        content: 'Delete the event',
+        trigger: '.o_cw_popover_delete',
+    },
+    {
+        content: 'Validate the deletion',
+        trigger:'button:contains("Ok")',
+        async run() {
+            $('button:contains("Ok")').click();
+            await new Promise((r) => setTimeout(r, 1000));
+        }
+    },
+]);
+
+tour.register('test_calendar_decline_tour', {
+    test: true,
+},
+[
+    {
+        content: 'Click on the event (focus + waiting)',
+        trigger: 'a .fc-content:contains("Test Event")',
+        async run() {
+            $('a .fc-content:contains("Test Event")').click();
+            await new Promise((r) => setTimeout(r, 1000));
+            $('a .fc-content:contains("Test Event")').click();
+        }
+    },
+    {
+        content: 'Delete the event',
+        trigger: '.o_cw_popover_delete',
+    },
+    {
+        content: 'Wait declined status',
+        trigger: '.o_attendee_status_declined',
+    },
+]);
+
+tour.register('test_calendar_decline_with_everybody_filter_tour', {
+    test: true,
+},
+[
+    {
+        content: 'Select filter (everybody)',
+        trigger: 'div[data-value="all"] input',
+    },
+    {
+        content: 'Click on the event (focus + waiting)',
+        trigger: 'a .fc-content:contains("Test Event")',
+        async run() {
+            $('a .fc-content:contains("Test Event")').click();
+            await new Promise((r) => setTimeout(r, 1000));
+            $('a .fc-content:contains("Test Event")').click();
+        }
+    },
+    {
+        content: 'Delete the event',
+        trigger: '.o_cw_popover_delete',
+    },
+    {
+        content: 'Select filter (everybody)',
+        trigger: 'div[data-value="all"] input',
+    },
+    {
+        content: 'Wait declined status',
+        trigger: '.o_attendee_status_declined',
+    },
+]);
+
+return __exports;
+});
+;
+
+/**********************************************************************
+*  Filepath: /contacts/static/tests/tours/debug_menu_set_defaults.js  *
+*  Lines: 74                                                          *
+**********************************************************************/
+odoo.define('debug_menu_set_defaults.tour', function (require) {
+    "use strict";
+
+    var tour = require('web_tour.tour');
+
+    tour.register('debug_menu_set_defaults', {
+        test: true,
+        url: '/web?debug=1',
+    },
+        [
+            ...tour.stepUtils.goToAppSteps('contacts.menu_contacts', "Open the contacts menu"),
+            {
+                content: "Create a new contact",
+                trigger: '.o-kanban-button-new',
+            },
+            {
+                content: "Check that Company is checked by default, and not Individual",
+                trigger: '.o_field_widget[name="company_type"] input[data-value="company"]:checked',
+                run: function () {},
+            },
+            {
+                content: "Select the individual radio button",
+                trigger: '.o_field_widget[name="company_type"] input[data-value="person"]',
+            },
+            {
+                content: "Open the debug menu",
+                trigger: '.o_debug_manager button',
+            },
+            {
+                content: "Click the Set Defaults menu",
+                trigger: '.o_debug_manager .dropdown-item:contains(Set Defaults)',
+            },
+            {
+                content: "Choose Company Type = Individual",
+                trigger: '#formview_default_fields',
+                run: function () {
+                    const element_field = document.querySelector('select#formview_default_fields');
+                    element_field.value = 'company_type';
+                    element_field.dispatchEvent(new Event("change"));
+                },
+            },
+            {
+                content: "Check that there are conditions",
+                trigger: '#formview_default_conditions',
+            },
+            {
+                content: "Save the new default",
+                trigger: 'footer button:contains(Save default)',
+            },
+            {
+                content: "Discard the contact creation",
+                trigger: 'button.o_form_button_cancel',
+            },
+            {
+                trigger: '.o-kanban-button-new',
+            },
+            {
+                content: "Check that Individual is checked instead of Company",
+                trigger: '.o_field_widget[name="company_type"] input[data-value="person"]:checked',
+                run: function () {},
+            },
+            {
+                content: "Discard the contact creation",
+                trigger: 'button.o_form_button_cancel',
+            },
+            {
+                content: "Wait for discard",
+                trigger: '.o_control_panel .o-kanban-button-new',
+                run() {},
+            },
+        ]
+    );
+
+});
+;
+
+/**************************************************************
+*  Filepath: /crm/static/tests/tours/create_crm_team_tour.js  *
+*  Lines: 40                                                  *
+**************************************************************/
+odoo.define('@crm/../tests/tours/create_crm_team_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module */
+
+const tour = require('web_tour.tour');
+
+tour.register('create_crm_team_tour', {
+    url: "/web",
+    test: true,
+}, [
+    ...tour.stepUtils.goToAppSteps('crm.crm_menu_root'),
+{
+    trigger: 'button[data-menu-xmlid="crm.crm_menu_config"]',
+}, {
+    trigger: 'a[data-menu-xmlid="crm.crm_team_config"]',
+}, {
+    trigger: 'button.o_list_button_add',
+}, {
+    trigger: 'input[id="name"]',
+    run: 'text My CRM Team',
+}, {
+    trigger: 'button.o-kanban-button-new',
+}, {
+    trigger: 'div.modal-dialog tr:contains("Test Salesman") input.form-check-input',
+    run: 'click',
+}, {
+    trigger: 'div.modal-dialog tr:contains("Test Sales Manager") input.form-check-input',
+    run: 'click',
+}, {
+    trigger: 'div.modal-dialog tr:contains("Test Sales Manager") input.form-check-input:checked',
+    run: () => {},
+}, {
+    trigger: 'button.o_select_button',
+}, 
+    ...tour.stepUtils.saveForm()
+]);
+
+return __exports;
+});
+;
+
+/*************************************************************************
+*  Filepath: /crm/static/tests/tours/crm_email_and_phone_propagation.js  *
+*  Lines: 56                                                             *
+*************************************************************************/
+odoo.define('crm.crm_email_and_phone_propagation', function (require) {
+    'use strict';
+
+    const tour = require('web_tour.tour');
+
+    tour.register('crm_email_and_phone_propagation_edit_save', {
+        test: true,
+        url: '/web',
+    }, [
+        tour.stepUtils.showAppsMenuItem(),
+        {
+            trigger: '.o_app[data-menu-xmlid="crm.crm_menu_root"]',
+            content: 'open crm app',
+        }, {
+            trigger: '.o_kanban_record .o_kanban_record_title span:contains(Test Lead Propagation)',
+            content: 'Open the first lead',
+            run: 'click',
+        }, {
+            trigger: '.o_form_button_save',
+            extra_trigger: '.o_form_editable .o_field_widget[name=email_from] input',
+            content: 'Save the lead',
+            run: 'click',
+        },
+    ]);
+
+    tour.register('crm_email_and_phone_propagation_remove_email_and_phone', {
+        test: true,
+        url: '/web',
+    }, [
+        tour.stepUtils.showAppsMenuItem(),
+        {
+            trigger: '.o_app[data-menu-xmlid="crm.crm_menu_root"]',
+            content: 'open crm app',
+        }, {
+            trigger: '.o_kanban_record .o_kanban_record_title span:contains(Test Lead Propagation)',
+            content: 'Open the first lead',
+            run: 'click',
+        }, {
+            trigger: '.o_form_editable .o_field_widget[name=email_from] input',
+            extra_trigger: '.o_form_editable .o_field_widget[name=phone] input',
+            content: 'Remove the email and the phone',
+            run: function (action) {
+                action.remove_text("", ".o_form_editable .o_field_widget[name=email_from] input");
+                action.remove_text("", ".o_form_editable .o_field_widget[name=phone] input");
+            },
+        }, {
+            trigger: '.o_back_button',
+            // wait the warning message to be visible
+            extra_trigger: '.o_form_sheet_bg .fa-exclamation-triangle:not(.o_invisible_modifier)',
+            content: 'Save the lead and exit to kanban',
+            run: 'click',
+        },{
+            trigger: '.o_kanban_renderer',
+        }
+    ]);
+});
+;
+
+/***********************************************************
+*  Filepath: /crm/static/tests/tours/crm_forecast_tour.js  *
+*  Lines: 102                                              *
+***********************************************************/
+odoo.define('@crm/../tests/tours/crm_forecast_tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module */
+const tour = require('web_tour.tour');
+const today = moment();
+
+tour.register('crm_forecast', {
+    test: true,
+    url: "/web",
+}, [
+    tour.stepUtils.showAppsMenuItem(),
+    {
+        trigger: ".o_app[data-menu-xmlid='crm.crm_menu_root']",
+        content: "open crm app",
+    }, {
+        trigger: '.dropdown-toggle[data-menu-xmlid="crm.crm_menu_report"]',
+        content: 'Open Reporting menu',
+        run: 'click',
+    }, {
+        trigger: '.dropdown-item[data-menu-xmlid="crm.crm_menu_forecast"]',
+        content: 'Open Forecast menu',
+        run: 'click',
+    }, {
+        trigger: '.o_column_quick_create:contains(Add next month)',
+        content: 'Wait page loading'
+    }, {
+        trigger: ".o-kanban-button-new",
+        content: "click create",
+        run: 'click',
+    }, {
+        trigger: ".o_field_widget[name=name] input",
+        content: "complete name",
+        run: "text Test Opportunity 1",
+    }, {
+        trigger: ".o_field_widget[name=expected_revenue] input",
+        content: "complete expected revenue",
+        run: "text 999999",
+    }, {
+        trigger: "button.o_kanban_edit",
+        content: "edit lead",
+    }, {
+        trigger: "div[name=date_deadline] input",
+        content: "complete expected closing",
+        run: `text ${today.format("MM/DD/YYYY")}`,
+    }, {
+        trigger: "div[name=date_deadline] input",
+        content: "click to make the datepicker disappear",
+        run: "click"
+    }, {
+        trigger: "body:not(:has(div.bootstrap-datetimepicker-widget))",
+        content: "wait for date_picker to disappear",
+        run: function () {},
+    }, {
+        trigger: '.o_back_button',
+        content: 'navigate back to the kanban view',
+        position: "bottom",
+        run: "click"
+    }, {
+        trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Opportunity 1')",
+        content: "move to the next month",
+        run: function (actions) {
+            const undefined_groups = $('.o_column_title:contains("None")').length;
+            actions.drag_and_drop_native(`.o_opportunity_kanban .o_kanban_group:eq(${1 + undefined_groups})`, this.$anchor);
+        },
+    }, {
+        trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Opportunity 1')",
+        content: "edit lead",
+        run: "click"
+    }, {
+        trigger: ".o_field_widget[name=date_deadline] input",
+        content: "complete expected closing",
+        run: function (actions) {
+            actions.text(`text ${moment(today).add(5, 'months').startOf('month').subtract(1, 'days').format("MM/DD/YYYY")}`, this.$anchor);
+            this.$anchor[0].dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+        },
+    }, {
+        trigger: "body:not(:has(div.bootstrap-datetimepicker-widget))",
+        content: "wait for date_picker to disappear",
+        run: function () {},
+    }, {
+        trigger: ".o_field_widget[name=probability] input",
+        content: "max out probability",
+        run: "text 100"
+    }, {
+        trigger: '.o_back_button',
+        content: 'navigate back to the kanban view',
+        position: "bottom",
+        run: "click"
+    }, {
+        trigger: '.o_kanban_add_column',
+        content: "add next month",
+        run: "click"
+    }, {
+        trigger: ".o_kanban_record:contains('Test Opportunity 1'):contains('Won')",
+        content: "assert that the opportunity has the Won banner",
+        run: function () {},
+    }
+]);
+
+return __exports;
+});
+;
+
+/********************************************************
+*  Filepath: /crm/static/tests/tours/crm_rainbowman.js  *
+*  Lines: 93                                            *
+********************************************************/
+odoo.define('@crm/../tests/tours/crm_rainbowman', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+    const tour = require('web_tour.tour');
+
+    tour.register('crm_rainbowman', {
+        test: true,
+        url: "/web",
+    }, [
+        tour.stepUtils.showAppsMenuItem(),
+        {
+            trigger: ".o_app[data-menu-xmlid='crm.crm_menu_root']",
+            content: "open crm app",
+        }, {
+            trigger: ".o-kanban-button-new",
+            content: "click create",
+        }, {
+            trigger: ".o_field_widget[name=name] input",
+            content: "complete name",
+            run: "text Test Lead 1",
+        }, {
+            trigger: ".o_field_widget[name=expected_revenue] input",
+            content: "complete expected revenue",
+            run: "text 999999997",
+        }, {
+            trigger: "button.o_kanban_add",
+            content: "create lead",
+        }, {
+            trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Lead 1')",
+            content: "move to won stage",
+            run: "drag_and_drop_native .o_opportunity_kanban .o_kanban_group:eq(3) "
+        }, {
+            trigger: ".o_reward_rainbow",
+            extra_trigger: ".o_reward_rainbow",
+            run: function () {} // check rainbowman is properly displayed
+        }, {
+            // This step and the following simulates the fact that after drag and drop,
+            // from the previous steps, a click event is triggered on the window element,
+            // which closes the currently shown .o_kanban_quick_create.
+            trigger: ".o_kanban_renderer",
+        }, {
+            trigger: ".o_kanban_renderer:not(:has(.o_kanban_quick_create))",
+            run() {},
+        }, {
+            trigger: ".o-kanban-button-new",
+            content: "create second lead",
+        }, {
+            trigger: ".o_field_widget[name=name] input",
+            content: "complete name",
+            run: "text Test Lead 2",
+        }, {
+            trigger: ".o_field_widget[name=expected_revenue] input",
+            content: "complete expected revenue",
+            run: "text 999999998",
+        }, {
+            trigger: "button.o_kanban_add",
+            content: "create lead",
+        }, {
+            trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Lead 2')",
+            run: function () {} // wait for the record to be properly created
+        }, {
+            // move first test back to new stage to be able to test rainbowman a second time
+            trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Lead 1')",
+            content: "move back to new stage",
+            run: "drag_and_drop .o_opportunity_kanban .o_kanban_group:eq(0) "
+        }, {
+            trigger: ".o_kanban_record .o_kanban_record_title:contains('Test Lead 2')",
+            content: "click on second lead",
+        }, {
+            trigger: ".o_statusbar_status button[data-value='4']",
+            content: "move lead to won stage",
+        },
+        ...tour.stepUtils.saveForm(),
+        {
+            trigger: ".o_statusbar_status button[data-value='1']",
+            extra_trigger: ".o_reward_rainbow",
+            content: "move lead to previous stage & rainbowman appears",
+        }, {
+            trigger: "button[name=action_set_won_rainbowman]",
+            content: "click button mark won",
+        },
+        ...tour.stepUtils.saveForm(),
+        {
+            trigger: ".o_menu_brand",
+            extra_trigger: ".o_reward_rainbow",
+            content: "last rainbowman appears",
+        }
+    ]);
+
+return __exports;
+});
+;
+
+/**************************************************************
+*  Filepath: /stock/static/tests/tours/stock_report_tests.js  *
+*  Lines: 23                                                  *
+**************************************************************/
+odoo.define('stock.reports.setup.tour', function (require) {
+    "use strict";
+
+    const tour = require('web_tour.tour');
+
+    tour.register('test_stock_route_diagram_report', {
+        test: true,
+    }, [
+    {
+        trigger: '.o_kanban_record',
+        extra_trigger:'.breadcrumb',
+    },
+    {
+        trigger: '.nav-item > a:contains("Inventory")',
+    },
+    {
+        trigger: '.btn[id="stock.view_diagram_button"]',
+    },
+    {
+        trigger: 'iframe .o_report_stock_rule',
+    },
+    ]);
+});
+;
+
+/************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/BarcodeScanning.tour.js  *
+*  Lines: 55                                                            *
+************************************************************************/
+odoo.define('point_of_sale.tour.BarcodeScanning', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    const Tour = require('web_tour.tour');
+
+    startSteps();
+
+
+    // Add a product with its barcode
+    ProductScreen.do.scan_barcode("0123456789");
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand');
+    ProductScreen.do.scan_barcode("0123456789");
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', 2);
+
+    // Test "Prices product" EAN-13 `23.....{NNNDD}` barcode pattern
+    ProductScreen.do.scan_ean13_barcode("2305000000004");
+    ProductScreen.check.selectedOrderlineHas('Magnetic Board', 1, "0.00");
+    ProductScreen.do.scan_ean13_barcode("2305000123451");
+    ProductScreen.check.selectedOrderlineHas('Magnetic Board', 1, "123.45");
+
+    // Test "Weighted product" EAN-13 `21.....{NNDDD}` barcode pattern
+    ProductScreen.do.scan_ean13_barcode("2100005000000");
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', 0, "0.00");
+    ProductScreen.do.scan_ean13_barcode("2100005080002");
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', 8);
+
+
+    Tour.register('BarcodeScanningTour', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+
+    // Add the Product 1 with GS1 barcode
+    ProductScreen.do.scan_barcode("0108431673020125100000001");
+    ProductScreen.check.selectedOrderlineHas('Product 1');
+    ProductScreen.do.scan_barcode("0108431673020125100000001");
+    ProductScreen.check.selectedOrderlineHas('Product 1', 2);
+
+    // Add the Product 2 with normal barcode
+    ProductScreen.do.scan_barcode("08431673020126");
+    ProductScreen.check.selectedOrderlineHas('Product 2');
+    ProductScreen.do.scan_barcode("08431673020126");
+    ProductScreen.check.selectedOrderlineHas('Product 2', 2);
+
+    // Add the Product 3 with normal barcode
+    ProductScreen.do.scan_barcode("3760171283370");
+    ProductScreen.check.selectedOrderlineHas('Product 3');
+    ProductScreen.do.scan_barcode("3760171283370");
+    ProductScreen.check.selectedOrderlineHas('Product 3', 2);
+
+    Tour.register('GS1BarcodeScanningTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/***************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/Chrome.tour.js  *
+*  Lines: 106                                                  *
+***************************************************************/
+odoo.define('point_of_sale.tour.Chrome', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { TicketScreen } = require('point_of_sale.tour.TicketScreenTourMethods');
+    const { Chrome } = require('point_of_sale.tour.ChromeTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    Chrome.check.isCashMoveButtonShown();
+
+    // Order 1 is at Product Screen
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Desk Pad', '1', '2', '2.0');
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.checkStatus('-0001', 'Ongoing');
+
+    // Order 2 is at Payment Screen
+    TicketScreen.do.clickNewTicket();
+    ProductScreen.exec.addOrderline('Monitor Stand', '3', '4', '12.0');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.check.isShown();
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.checkStatus('-0002', 'Payment');
+
+    // Order 3 is at Receipt Screen
+    TicketScreen.do.clickNewTicket();
+    ProductScreen.exec.addOrderline('Whiteboard Pen', '5', '6', '30.0');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.checkStatus('-0003', 'Receipt');
+
+    // Select order 1, should be at Product Screen
+    TicketScreen.do.selectOrder('-0001');
+    ProductScreen.check.productIsDisplayed('Desk Pad');
+    ProductScreen.check.selectedOrderlineHas('Desk Pad', '1.0', '2.0');
+
+    // Select order 2, should be at Payment Screen
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.selectOrder('-0002');
+    PaymentScreen.check.emptyPaymentlines('12.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+
+    // Select order 3, should be at Receipt Screen
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.selectOrder('-0003');
+    ReceiptScreen.check.totalAmountContains('30.0');
+
+    // Pay order 1, with change
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.selectOrder('-0001');
+    ProductScreen.check.isShown();
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('2 0');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.totalAmountContains('2.0');
+
+    // Order 1 now should have Receipt status
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.checkStatus('-0001', 'Receipt');
+
+    // Select order 3, should still be at Receipt Screen
+    // and the total amount doesn't change.
+    TicketScreen.do.selectOrder('-0003');
+    ReceiptScreen.check.totalAmountContains('30.0');
+
+    // click next screen on order 3
+    // then delete the new empty order
+    ReceiptScreen.do.clickNextOrder();
+    ProductScreen.check.orderIsEmpty();
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.deleteOrder('-0004');
+    TicketScreen.do.deleteOrder('-0001');
+
+    // After deleting order 1 above, order 2 became
+    // the 2nd-row order and it has payment status
+    TicketScreen.check.nthRowContains(2, 'Payment')
+    TicketScreen.do.deleteOrder('-0002');
+    Chrome.do.confirmPopup();
+    TicketScreen.do.clickNewTicket();
+
+    // Invoice an order
+    ProductScreen.exec.addOrderline('Whiteboard Pen', '5', '6');
+    ProductScreen.do.clickPartnerButton();
+    ProductScreen.do.clickCustomer('Nicole Ford');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickInvoiceButton();
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+
+    Tour.register('ChromeTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/****************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/ChromeWithoutCashMovePermission.tour.js  *
+*  Lines: 17                                                                            *
+****************************************************************************************/
+odoo.define('@point_of_sale/../tests/tours/ChromeWithoutCashMovePermission.tour', async function (require) {
+'use strict';
+let __exports = {};
+/** @odoo-module **/
+
+const { getSteps, startSteps } = require("point_of_sale.tour.utils");
+const { Chrome } = require("point_of_sale.tour.ChromeTourMethods");
+const Tour = require("web_tour.tour");
+
+startSteps();
+
+Chrome.check.isCashMoveButtonHidden();
+
+Tour.register('chrome_without_cash_move_permission', { test: true, url: '/pos/ui' }, getSteps());
+
+return __exports;
+});
+;
+
+/**********************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/PaymentScreen.tour.js  *
+*  Lines: 252                                                         *
+**********************************************************************/
+odoo.define('point_of_sale.tour.PaymentScreen', function (require) {
+    'use strict';
+
+    const { Chrome } = require('point_of_sale.tour.ChromeTourMethods');
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { TicketScreen } = require('point_of_sale.tour.TicketScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.exec.addOrderline('Letter Tray', '10');
+    ProductScreen.check.selectedOrderlineHas('Letter Tray', '10.0');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.check.emptyPaymentlines('52.8');
+
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('1 1');
+    PaymentScreen.check.selectedPaymentlineHas('Cash', '11.00');
+    PaymentScreen.check.remainingIs('41.8');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+    // remove the selected paymentline with multiple backspace presses
+    PaymentScreen.do.pressNumpad('Backspace Backspace');
+    PaymentScreen.check.selectedPaymentlineHas('Cash', '0.00');
+    PaymentScreen.do.pressNumpad('Backspace');
+    PaymentScreen.check.emptyPaymentlines('52.8');
+
+    // Pay with bank, the selected line should have full amount
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+    // remove the line using the delete button
+    PaymentScreen.do.clickPaymentlineDelButton('Bank', '52.8');
+
+    // Use +10 and +50 to increment the amount of the paymentline
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('+10');
+    PaymentScreen.check.remainingIs('42.8');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+    PaymentScreen.do.pressNumpad('+50');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('7.2');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+    PaymentScreen.do.clickPaymentlineDelButton('Cash', '60.0');
+
+    // Multiple paymentlines
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('1');
+    PaymentScreen.check.remainingIs('51.8');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('5');
+    PaymentScreen.check.remainingIs('46.8');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.pressNumpad('2 0');
+    PaymentScreen.check.remainingIs('26.8');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(false);
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+
+    Tour.register('PaymentScreenTour', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Letter Tray', '1', '10');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.pressNumpad('1 0 0 0');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Tour.register('PaymentScreenTour2', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('2.00');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.clickNewTicket();
+
+    ProductScreen.exec.addOrderline('Product Test', '-1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('-2.00');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Tour.register('PaymentScreenRoundingUp', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.95');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.clickNewTicket();
+
+    ProductScreen.exec.addOrderline('Product Test', '-1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('-1.95');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Tour.register('PaymentScreenRoundingDown', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test 1.2', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.00');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.clickNewTicket();
+
+    ProductScreen.exec.addOrderline('Product Test 1.25', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.5');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.clickNewTicket();
+
+    ProductScreen.exec.addOrderline('Product Test 1.4', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.5');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.clickNewTicket();
+
+    ProductScreen.exec.addOrderline('Product Test 1.2', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.00');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('2');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('1.0');
+
+    Tour.register('PaymentScreenRoundingHalfUp', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test 40', '1');
+    ProductScreen.do.clickPartnerButton();
+    ProductScreen.do.clickCustomer('Nicole Ford');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('40.00');
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.pressNumpad('3 8');
+    PaymentScreen.check.remainingIs('2.0');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    PaymentScreen.do.clickInvoiceButton();
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.receiptIsThere();
+    ReceiptScreen.do.clickNextOrder();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test 41', '1');
+    ProductScreen.do.clickPartnerButton();
+    ProductScreen.do.clickCustomer('Nicole Ford');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('41.00');
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.pressNumpad('3 8');
+    PaymentScreen.check.remainingIs('3.0');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('0.0');
+
+    PaymentScreen.do.clickInvoiceButton();
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.receiptIsThere();
+
+    Tour.register('PaymentScreenRoundingHalfUpCashAndBank', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Product Test', '1');
+    ProductScreen.do.clickPayButton();
+
+    PaymentScreen.check.totalIs('1.95');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('5');
+
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.check.changeIs('3.05');
+    PaymentScreen.check.totalDueIs('1.95');
+
+    Tour.register('PaymentScreenTotalDueWithOverPayment', { test: true, url: '/pos/ui' }, getSteps());
+
+});
+;
+
+/****************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/ProductConfigurator.tour.js  *
+*  Lines: 67                                                                *
+****************************************************************************/
+odoo.define('point_of_sale.tour.ProductConfigurator', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { ProductConfigurator } = require('point_of_sale.tour.ProductConfiguratorTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    // signal to start generating steps
+    // when finished, steps can be taken from getSteps
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    // Go by default to home category
+    ProductScreen.do.clickHomeCategory();
+
+    // Click on Configurable Chair product
+    ProductScreen.do.clickDisplayedProduct('Configurable Chair');
+    ProductConfigurator.check.isShown();
+
+    // Cancel configuration, not product should be in order
+    ProductConfigurator.do.cancelAttributes();
+    ProductScreen.check.orderIsEmpty();
+
+    // Click on Configurable Chair product
+    ProductScreen.do.clickDisplayedProduct('Configurable Chair');
+    ProductConfigurator.check.isShown();
+
+    // Pick Color
+    ProductConfigurator.do.pickColor('Red');
+
+    // Pick Radio
+    ProductConfigurator.do.pickSelect('Metal');
+
+    // Pick Select
+    ProductConfigurator.do.pickRadio('Other');
+
+    // Fill in custom attribute
+    ProductConfigurator.do.fillCustomAttribute('Custom Fabric');
+
+    // Confirm configuration
+    ProductConfigurator.do.confirmAttributes();
+
+    // Check that the product has been added to the order with correct attributes and price
+    ProductScreen.check.selectedOrderlineHas('Configurable Chair (Red, Metal, Other: Custom Fabric)', '1.0', '11.0');
+
+    // Orderlines with the same attributes should be merged
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Configurable Chair');
+    ProductConfigurator.do.pickColor('Red');
+    ProductConfigurator.do.pickSelect('Metal');
+    ProductConfigurator.do.pickRadio('Other');
+    ProductConfigurator.do.fillCustomAttribute('Custom Fabric');
+    ProductConfigurator.do.confirmAttributes();
+    ProductScreen.check.selectedOrderlineHas('Configurable Chair (Red, Metal, Other: Custom Fabric)', '2.0', '22.0');
+
+    // Orderlines with different attributes shouldn't be merged
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Configurable Chair');
+    ProductConfigurator.do.pickColor('Blue');
+    ProductConfigurator.do.pickSelect('Metal');
+    ProductConfigurator.do.pickRadio('Leather');
+    ProductConfigurator.do.confirmAttributes();
+    ProductScreen.check.selectedOrderlineHas('Configurable Chair (Blue, Metal, Leather)', '1.0', '10.0');
+
+    Tour.register('ProductConfiguratorTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/**********************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/ProductScreen.tour.js  *
+*  Lines: 235                                                         *
+**********************************************************************/
+odoo.define('point_of_sale.tour.ProductScreen', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { TextAreaPopup } = require('point_of_sale.tour.TextAreaPopupTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    // signal to start generating steps
+    // when finished, steps can be taken from getSteps
+    startSteps();
+
+    // Go by default to home category
+    ProductScreen.do.clickHomeCategory();
+
+    // Clicking product multiple times should increment quantity
+    ProductScreen.do.clickDisplayedProduct('Desk Organizer');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '1.0', '5.10');
+    ProductScreen.do.clickDisplayedProduct('Desk Organizer');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '2.0', '10.20');
+
+    // Clicking product should add new orderline and select the orderline
+    // If orderline exists, increment the quantity
+    ProductScreen.do.clickDisplayedProduct('Letter Tray');
+    ProductScreen.check.selectedOrderlineHas('Letter Tray', '1.0', '5.28');
+    ProductScreen.do.clickDisplayedProduct('Desk Organizer');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '3.0', '15.30');
+
+    // Check effects of clicking numpad buttons
+    ProductScreen.do.clickOrderline('Letter Tray', '1');
+    ProductScreen.check.selectedOrderlineHas('Letter Tray', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Letter Tray', '0.0', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '3', '15.30');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '0.0', '0.0');
+    ProductScreen.do.pressNumpad('1');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '1.0', '5.1');
+    ProductScreen.do.pressNumpad('2');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '12.0', '61.2');
+    ProductScreen.do.pressNumpad('3');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '123.0', '627.3');
+    ProductScreen.do.pressNumpad('. 5');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '123.5', '629.85');
+    ProductScreen.do.pressNumpad('Price');
+    ProductScreen.do.pressNumpad('1');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '123.5', '123.5');
+    ProductScreen.do.pressNumpad('1 .');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '123.5', '1,358.5');
+    ProductScreen.do.pressNumpad('Disc');
+    ProductScreen.do.pressNumpad('5 .');
+    ProductScreen.check.selectedOrderlineHas('Desk Organizer', '123.5', '1,290.58');
+    ProductScreen.do.pressNumpad('Qty');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.orderIsEmpty();
+
+    // Check different subcategories
+    ProductScreen.do.clickSubcategory('Desks');
+    ProductScreen.check.productIsDisplayed('Desk Pad');
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickSubcategory('Miscellaneous');
+    ProductScreen.check.productIsDisplayed('Whiteboard Pen');
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickSubcategory('Chairs');
+    ProductScreen.check.productIsDisplayed('Letter Tray');
+    ProductScreen.do.clickHomeCategory();
+    
+    // Add two orderlines and update quantity
+    ProductScreen.do.clickDisplayedProduct('Whiteboard Pen');
+    ProductScreen.do.clickDisplayedProduct('Wall Shelf Unit');
+    ProductScreen.do.clickOrderline('Whiteboard Pen', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '1.0');
+    ProductScreen.do.pressNumpad('2');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '2.0');
+    ProductScreen.do.clickOrderline('Wall Shelf Unit', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', '1.0');
+    ProductScreen.do.pressNumpad('2');
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', '2.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '2.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.orderIsEmpty();
+
+    // Add multiple orderlines then delete each of them until empty
+    ProductScreen.do.clickDisplayedProduct('Whiteboard Pen');
+    ProductScreen.do.clickDisplayedProduct('Wall Shelf Unit');
+    ProductScreen.do.clickDisplayedProduct('Small Shelf');
+    ProductScreen.do.clickDisplayedProduct('Magnetic Board');
+    ProductScreen.do.clickDisplayedProduct('Monitor Stand');
+    ProductScreen.do.clickOrderline('Whiteboard Pen', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Whiteboard Pen', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', '1.0');
+    ProductScreen.do.clickOrderline('Wall Shelf Unit', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Wall Shelf Unit', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', '1.0');
+    ProductScreen.do.clickOrderline('Small Shelf', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Small Shelf', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Small Shelf', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', '1.0');
+    ProductScreen.do.clickOrderline('Magnetic Board', '1.0');
+    ProductScreen.check.selectedOrderlineHas('Magnetic Board', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Magnetic Board', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', '1.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.selectedOrderlineHas('Monitor Stand', '0.0');
+    ProductScreen.do.pressNumpad('Backspace');
+    ProductScreen.check.orderIsEmpty();
+
+    // Test OrderlineCustomerNoteButton
+    ProductScreen.do.clickDisplayedProduct('Desk Organizer');
+    ProductScreen.do.clickOrderlineCustomerNoteButton();
+    TextAreaPopup.check.isShown();
+    TextAreaPopup.do.inputText('Test customer note');
+    TextAreaPopup.do.clickConfirm();
+    ProductScreen.check.orderlineHasCustomerNote('Desk Organizer', '1', 'Test customer note');
+
+
+    Tour.register('ProductScreenTour', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Test Product');
+    ProductScreen.check.totalAmountIs('100.00');
+    ProductScreen.do.changeFiscalPosition('No Tax');
+    ProductScreen.check.noDiscountApplied("100.00");
+    ProductScreen.check.totalAmountIs('86.96');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.00');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.check.noOrderlineContainsDiscount();
+
+    Tour.register('FiscalPositionNoTax', { test: true, url: '/pos/ui' }, getSteps());
+});
+
+odoo.define('point_of_sale.tour.FixedPriceNegativeQty', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+
+    ProductScreen.do.clickDisplayedProduct('Zero Amount Product');
+    ProductScreen.check.selectedOrderlineHas('Zero Amount Product', '1.0', '1.0');
+    ProductScreen.do.pressNumpad('+/- 1');
+    ProductScreen.check.selectedOrderlineHas('Zero Amount Product', '-1.0', '-1.0');
+
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.00');
+    PaymentScreen.do.clickValidate();
+
+    ReceiptScreen.check.receiptIsThere();
+
+    Tour.register('FixedTaxNegativeQty', { test: true, url: '/pos/ui' }, getSteps());
+});
+
+odoo.define('point_of_sale.tour.OpenCloseCashCount', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.do.enterOpeningAmount('90');
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.check.checkSecondCashClosingDetailsLineAmount('10.00', '-');
+
+    Tour.register('CashClosingDetails', { test: true, url: '/pos/ui' }, getSteps());
+});
+
+odoo.define('point_of_sale.tour.RoundGloballyTax', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Test Product');
+    ProductScreen.check.totalAmountIs('115.00');
+
+    Tour.register('RoundGloballyAmoundTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+
+odoo.define('point_of_sale.tour.ShowTaxExcludedTour', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+
+    ProductScreen.do.clickHomeCategory();
+
+    ProductScreen.do.clickDisplayedProduct('Test Product');
+    ProductScreen.check.selectedOrderlineHas('Test Product', '1.0', '100.0');
+    ProductScreen.check.totalAmountIs('110.0');
+
+    Tour.register('ShowTaxExcludedTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/**********************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/ReceiptScreen.tour.js  *
+*  Lines: 83                                                          *
+**********************************************************************/
+odoo.define('point_of_sale.tour.ReceiptScreen', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { NumberPopup } = require('point_of_sale.tour.NumberPopupTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    const Tour = require('web_tour.tour');
+
+    startSteps();
+
+    // press close button in receipt screen
+    ProductScreen.exec.addOrderline('Letter Tray', '10', '5');
+    ProductScreen.check.selectedOrderlineHas('Letter Tray', '10');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.validateButtonIsHighlighted(true);
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.receiptIsThere();
+    // letter tray has 10% tax (search SRC)
+    ReceiptScreen.check.totalAmountContains('55.0');
+    ReceiptScreen.do.clickNextOrder();
+
+    // send email in receipt screen
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Desk Pad', '6', '5', '30.0');
+    ProductScreen.exec.addOrderline('Whiteboard Pen', '6', '6', '36.0');
+    ProductScreen.exec.addOrderline('Monitor Stand', '6', '1', '6.0');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.pressNumpad('7 0');
+    PaymentScreen.check.remainingIs('2.0');
+    PaymentScreen.do.pressNumpad('0');
+    PaymentScreen.check.remainingIs('0.00');
+    PaymentScreen.check.changeIs('628.0');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.receiptIsThere();
+    ReceiptScreen.check.totalAmountContains('72.0');
+    ReceiptScreen.do.setEmail('test@receiptscreen.com');
+    ReceiptScreen.do.clickSend();
+    ReceiptScreen.check.emailIsSuccessful();
+    ReceiptScreen.do.clickNextOrder();
+
+    // order with tip
+    // check if tip amount is displayed
+    ProductScreen.exec.addOrderline('Desk Pad', '6', '5');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickTipButton();
+    NumberPopup.do.pressNumpad('1');
+    NumberPopup.check.inputShownIs('1');
+    NumberPopup.do.clickConfirm();
+    PaymentScreen.check.emptyPaymentlines('31.0');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.receiptIsThere();
+    ReceiptScreen.check.totalAmountContains('$ 30.00 + $ 1.00 tip');
+    ReceiptScreen.do.clickNextOrder();
+
+    // Test customer note in receipt
+    ProductScreen.exec.addOrderline('Desk Pad', '1', '5');
+    ProductScreen.exec.addCustomerNote('Test customer note')
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.customerNoteIsThere('Test customer note');
+
+    Tour.register('ReceiptScreenTour', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Test Product', '1');
+    ProductScreen.do.clickPricelistButton();
+    ProductScreen.do.selectPriceList('special_pricelist');
+    ProductScreen.check.discountOriginalPriceIs('7.0');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.discountAmountIs('0.7');
+
+    Tour.register('ReceiptScreenDiscountWithPricelistTour', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/*********************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/TicketScreen.tour.js  *
+*  Lines: 192                                                        *
+*********************************************************************/
+odoo.define('point_of_sale.tour.TicketScreen', function (require) {
+    'use strict';
+
+    const { ProductScreen } = require('point_of_sale.tour.ProductScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { PartnerListScreen } = require('point_of_sale.tour.PartnerListScreenTourMethods');
+    const { TicketScreen } = require('point_of_sale.tour.TicketScreenTourMethods');
+    const { ErrorPopup } = require('point_of_sale.tour.ErrorPopupTourMethods');
+    const { Chrome } = require('point_of_sale.tour.ChromeTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    var Tour = require('web_tour.tour');
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.exec.addOrderline('Desk Pad', '1', '2');
+    ProductScreen.do.clickPartnerButton();
+    ProductScreen.do.clickCustomer('Nicole Ford');
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.nthRowContains(2, 'Nicole Ford');
+    TicketScreen.do.clickNewTicket();
+    ProductScreen.exec.addOrderline('Desk Pad', '1', '3');
+    ProductScreen.do.clickPartnerButton();
+    ProductScreen.do.clickCustomer('Brandon Freeman');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.check.isShown();
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.nthRowContains(3, 'Brandon Freeman');
+    TicketScreen.do.clickNewTicket();
+    ProductScreen.exec.addOrderline('Desk Pad', '2', '4');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    Chrome.do.clickTicketButton();
+    TicketScreen.check.nthRowContains(4, 'Receipt');
+    TicketScreen.do.selectFilter('Receipt');
+    TicketScreen.check.nthRowContains(2, 'Receipt');
+    TicketScreen.do.selectFilter('Payment');
+    TicketScreen.check.nthRowContains(2, 'Payment');
+    TicketScreen.do.selectFilter('Ongoing');
+    TicketScreen.check.nthRowContains(2, 'Ongoing');
+    TicketScreen.do.selectFilter('All active orders');
+    TicketScreen.check.nthRowContains(4, 'Receipt');
+    TicketScreen.do.search('Customer', 'Nicole');
+    TicketScreen.check.nthRowContains(2, 'Nicole');
+    TicketScreen.do.search('Customer', 'Brandon');
+    TicketScreen.check.nthRowContains(2, 'Brandon');
+    TicketScreen.do.search('Receipt Number', '-0003');
+    TicketScreen.check.nthRowContains(2, 'Receipt');
+    // Close the TicketScreen to see the current order which is in ReceiptScreen.
+    // This is just to remove the search string in the search bar.
+    TicketScreen.do.clickDiscard();
+    ReceiptScreen.check.isShown();
+    // Open again the TicketScreen to check the Paid filter.
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.selectFilter('Paid');
+    TicketScreen.check.nthRowContains(2, '-0003');
+    // Pay the order that was in PaymentScreen.
+    TicketScreen.do.selectFilter('Payment');
+    TicketScreen.do.selectOrder('-0002');
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.do.clickNextOrder();
+    ProductScreen.check.isShown();
+    // Check that the Paid filter will show the 2 synced orders.
+    Chrome.do.clickTicketButton();
+    TicketScreen.do.selectFilter('Paid');
+    TicketScreen.check.nthRowContains(2, 'Brandon Freeman');
+    TicketScreen.check.nthRowContains(3, '-0003');
+    // Invoice order
+    TicketScreen.do.selectOrder('-0003');
+    TicketScreen.check.orderWidgetIsNotEmpty();
+    TicketScreen.do.clickControlButton('Invoice');
+    Chrome.do.confirmPopup();
+    PartnerListScreen.check.isShown();
+    PartnerListScreen.do.clickPartner('Colleen Diaz');
+    TicketScreen.check.partnerIs('Colleen Diaz');
+    // Reprint receipt
+    TicketScreen.do.clickControlButton('Print Receipt');
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.do.clickBack();
+    // When going back, the ticket screen should be in its previous state.
+    TicketScreen.check.filterIs('Paid');
+
+    // Test refund //
+    TicketScreen.do.clickDiscard();
+    ProductScreen.check.isShown();
+    ProductScreen.check.orderIsEmpty();
+    ProductScreen.do.clickRefund();
+    // Filter should be automatically 'Paid'.
+    TicketScreen.check.filterIs('Paid');
+    TicketScreen.do.selectOrder('-0003');
+    TicketScreen.check.partnerIs('Colleen Diaz');
+    TicketScreen.do.clickOrderline('Desk Pad');
+    TicketScreen.do.pressNumpad('3');
+    // Error should show because 2 is more than the number
+    // that can be refunded.
+    ErrorPopup.do.clickConfirm();
+    TicketScreen.do.clickDiscard();
+    ProductScreen.check.isShown();
+    ProductScreen.check.orderIsEmpty();
+    ProductScreen.do.clickRefund();
+    TicketScreen.do.selectOrder('-0003');
+    TicketScreen.do.clickOrderline('Desk Pad');
+    TicketScreen.do.pressNumpad('1');
+    TicketScreen.check.toRefundTextContains('To Refund: 1.00');
+    TicketScreen.do.confirmRefund();
+    ProductScreen.check.isShown();
+    ProductScreen.check.selectedOrderlineHas('Desk Pad', '-1.00');
+    // Try changing the refund line to positive number.
+    // Error popup should show.
+    ProductScreen.do.pressNumpad('2');
+    ErrorPopup.do.clickConfirm();
+    // Change the refund line quantity to -3 -- not allowed
+    // so error popup.
+    ProductScreen.do.pressNumpad('+/- 3');
+    ErrorPopup.do.clickConfirm();
+    // Change the refund line quantity to -2 -- allowed.
+    ProductScreen.do.pressNumpad('+/- 2');
+    ProductScreen.check.selectedOrderlineHas('Desk Pad', '-2.00');
+    // Check if the amount being refunded changed to 2.
+    ProductScreen.do.clickRefund();
+    TicketScreen.do.selectOrder('-0003');
+    TicketScreen.check.toRefundTextContains('Refunding 2.00');
+    TicketScreen.do.clickDiscard();
+    // Pay the refund order.
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.do.clickNextOrder();
+    // Check refunded quantity.
+    ProductScreen.do.clickRefund();
+    TicketScreen.do.selectOrder('-0003');
+    TicketScreen.check.refundedNoteContains('2.00 Refunded');
+
+    Tour.register('TicketScreenTour', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Product Test');
+    ProductScreen.check.totalAmountIs('100.00');
+    ProductScreen.do.changeFiscalPosition('No Tax');
+    ProductScreen.check.totalAmountIs('86.96');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.00');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.do.clickNextOrder();
+    ProductScreen.do.clickRefund();
+    TicketScreen.do.selectOrder('-0001');
+    TicketScreen.do.clickOrderline('Product Test');
+    TicketScreen.do.pressNumpad('1');
+    TicketScreen.check.toRefundTextContains('To Refund: 1.00');
+    TicketScreen.do.confirmRefund();
+    ProductScreen.check.isShown();
+    ProductScreen.check.totalAmountIs('-86.96');
+
+    Tour.register('FiscalPositionNoTaxRefund', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickHomeCategory();
+    ProductScreen.do.clickDisplayedProduct('Product A');
+    ProductScreen.do.enterLotNumber('123456789');
+    ProductScreen.check.selectedOrderlineHas('Product A', '1.00');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+    ReceiptScreen.do.clickNextOrder();
+    ProductScreen.do.clickRefund();
+    TicketScreen.do.selectOrder('-0001');
+    TicketScreen.do.clickOrderline('Product A');
+    TicketScreen.do.pressNumpad('1');
+    TicketScreen.check.toRefundTextContains('To Refund: 1.00');
+    TicketScreen.do.confirmRefund();
+    ProductScreen.check.isShown();
+    ProductScreen.do.clickLotIcon();
+    ProductScreen.check.checkFirstLotNumber('123456789');
+
+    Tour.register('LotRefundTour', { test: true, url: '/pos/ui' }, getSteps());
+
+});
+;
+
+/*****************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/ChromeTourMethods.js  *
+*  Lines: 49                                                                 *
+*****************************************************************************/
+odoo.define('point_of_sale.tour.ChromeTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        confirmPopup() {
+            return [
+                {
+                    content: 'confirm popup',
+                    trigger: '.popups .modal-dialog .button.confirm',
+                },
+            ];
+        }
+        clickTicketButton() {
+            return [
+                {
+                    trigger: '.pos-topheader .ticket-button',
+                },
+                {
+                    trigger: '.subwindow .ticket-screen',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isCashMoveButtonHidden() {
+            return [
+                {
+                    trigger: '.pos-topheader:not(:contains(Cash In/Out))',
+                    run: () => {},
+                }
+            ];
+        }
+
+        isCashMoveButtonShown() {
+            return [
+                {
+                    trigger: '.pos-topheader:contains(Cash In/Out)',
+                    run: () => {},
+                }
+            ];
+        }
+    }
+
+    return createTourMethods('Chrome', Do, Check);
+});
+;
+
+/*********************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/ErrorPopupTourMethods.js  *
+*  Lines: 30                                                                     *
+*********************************************************************************/
+odoo.define('point_of_sale.tour.ErrorPopupTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickConfirm() {
+            return [
+                {
+                    content: 'click confirm button',
+                    trigger: '.popup-error .footer .cancel',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'error popup is shown',
+                    trigger: '.modal-dialog .popup-error',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('ErrorPopup', Do, Check);
+});
+;
+
+/**********************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/NumberPopupTourMethods.js  *
+*  Lines: 72                                                                      *
+**********************************************************************************/
+odoo.define('point_of_sale.tour.NumberPopupTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        /**
+         * Note: Maximum of 2 characters because NumberBuffer only allows 2 consecutive
+         * fast inputs. Fast inputs is the case in tours.
+         *
+         * @param {String} keys space-separated input keys
+         */
+        pressNumpad(keys) {
+            const numberChars = '0 1 2 3 4 5 6 7 8 9 C'.split(' ');
+            const modeButtons = '+1 +10 +2 +20 +5 +50'.split(' ');
+            const decimalSeparators = ', .'.split(' ');
+            function generateStep(key) {
+                let trigger;
+                if (numberChars.includes(key)) {
+                    trigger = `.popup-numpad .number-char:contains("${key}")`;
+                } else if (modeButtons.includes(key)) {
+                    trigger = `.popup-numpad .mode-button:contains("${key}")`;
+                } else if (key === 'Backspace') {
+                    trigger = `.popup-numpad .numpad-backspace`;
+                } else if (decimalSeparators.includes(key)) {
+                    trigger = `.popup-numpad .number-char.dot`;
+                }
+                return {
+                    content: `'${key}' pressed in numpad`,
+                    trigger,
+                };
+            }
+            return keys.split(' ').map(generateStep);
+        }
+        clickConfirm() {
+            return [
+                {
+                    content: 'click confirm button',
+                    trigger: '.popup-number .footer .confirm',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'number popup is shown',
+                    trigger: '.modal-dialog .popup-number',
+                    run: () => {},
+                },
+            ];
+        }
+        inputShownIs(val) {
+            return [
+                {
+                    content: 'number input element check',
+                    trigger: '.modal-dialog .popup-number .popup-input',
+                    run: () => {},
+                },
+                {
+                    content: `input shown is '${val}'`,
+                    trigger: `.modal-dialog .popup-number .popup-input:contains("${val}")`,
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('NumberPopup', Do, Check);
+});
+;
+
+/****************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/PartnerListScreenTourMethods.js  *
+*  Lines: 32                                                                            *
+****************************************************************************************/
+odoo.define('point_of_sale.tour.PartnerListScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickPartner(name) {
+            return [
+                {
+                    content: `click partner '${name}' from partner list screen`,
+                    trigger: `.partnerlist-screen .partner-list-contents .partner-line td:contains("${name}")`,
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'partner list screen is shown',
+                    trigger: '.pos-content .partnerlist-screen',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    class Execute {}
+
+    return createTourMethods('PartnerListScreen', Do, Check, Execute);
+});
+;
+
+/************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/PaymentScreenTourMethods.js  *
+*  Lines: 225                                                                       *
+************************************************************************************/
+odoo.define('point_of_sale.tour.PaymentScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickPaymentMethod(name) {
+            return [
+                {
+                    content: `click '${name}' payment method`,
+                    trigger: `.paymentmethods .button.paymentmethod:contains("${name}")`,
+                },
+            ];
+        }
+
+        /**
+         * Delete the paymentline having the given payment method name and amount.
+         * @param {String} name payment method
+         * @param {String} amount
+         */
+        clickPaymentlineDelButton(name, amount) {
+            return [
+                {
+                    content: `delete ${name} paymentline with ${amount} amount`,
+                    trigger: `.paymentlines .paymentline .payment-name:contains("${name}") ~ .delete-button`,
+                },
+            ];
+        }
+
+        clickEmailButton() {
+            return [
+                {
+                    content: `click email button`,
+                    trigger: `.payment-buttons .js_email`,
+                },
+            ];
+        }
+
+        clickInvoiceButton() {
+            return [{ content: 'click invoice button', trigger: '.payment-buttons .js_invoice' }];
+        }
+
+        clickValidate() {
+            return [
+                {
+                    content: 'validate payment',
+                    trigger: `.payment-screen .button.next.highlight`,
+                },
+            ];
+        }
+
+        /**
+         * Press the numpad in sequence based on the given space-separated keys.
+         * Note: Maximum of 2 characters because NumberBuffer only allows 2 consecutive
+         * fast inputs. Fast inputs is the case in tours.
+         *
+         * @param {String} keys space-separated numpad keys
+         */
+        pressNumpad(keys) {
+            const numberChars = '. +/- 0 1 2 3 4 5 6 7 8 9'.split(' ');
+            const modeButtons = '+10 +20 +50'.split(' ');
+            function generateStep(key) {
+                let trigger;
+                if (numberChars.includes(key)) {
+                    trigger = `.payment-numpad .number-char:contains("${key}")`;
+                } else if (modeButtons.includes(key)) {
+                    trigger = `.payment-numpad .mode-button:contains("${key}")`;
+                } else if (key === 'Backspace') {
+                    trigger = `.payment-numpad .number-char img[alt="Backspace"]`;
+                }
+                return {
+                    content: `'${key}' pressed in payment numpad`,
+                    trigger,
+                };
+            }
+            return keys.split(' ').map(generateStep);
+        }
+
+        clickBack() {
+            return [
+                {
+                    content: 'click back button',
+                    trigger: '.payment-screen .button.back',
+                },
+            ];
+        }
+
+        clickTipButton() {
+            return [
+                {
+                    trigger: '.payment-screen .button.js_tip',
+                },
+            ]
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'payment screen is shown',
+                    trigger: '.pos .payment-screen',
+                    run: () => {},
+                },
+            ];
+        }
+        /**
+         * Check if change is the provided amount.
+         * @param {String} amount
+         */
+        changeIs(amount) {
+            return [
+                {
+                    content: `change is ${amount}`,
+                    trigger: `.payment-status-change .amount:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        /**
+         * Check if the remaining is the provided amount.
+         * @param {String} amount
+         */
+        remainingIs(amount) {
+            return [
+                {
+                    content: `remaining amount is ${amount}`,
+                    trigger: `.payment-status-remaining .amount:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        /**
+         * Check if validate button is highlighted.
+         * @param {Boolean} isHighlighted
+         */
+        validateButtonIsHighlighted(isHighlighted = true) {
+            return [
+                {
+                    content: `validate button is ${
+                        isHighlighted ? 'highlighted' : 'not highligted'
+                    }`,
+                    trigger: isHighlighted
+                        ? `.payment-screen .button.next.highlight`
+                        : `.payment-screen .button.next:not(:has(.highlight))`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        /**
+         * Check if the paymentlines are empty. Also provide the amount to pay.
+         * @param {String} amountToPay
+         */
+        emptyPaymentlines(amountToPay) {
+            return [
+                {
+                    content: `there are no paymentlines`,
+                    trigger: `.paymentlines-empty`,
+                    run: () => {},
+                },
+                {
+                    content: `amount to pay is '${amountToPay}'`,
+                    trigger: `.paymentlines-empty .total:contains("${amountToPay}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        /**
+         * Check if the selected paymentline has the given payment method and amount.
+         * @param {String} paymentMethodName
+         * @param {String} amount
+         */
+        selectedPaymentlineHas(paymentMethodName, amount) {
+            return [
+                {
+                    content: `line paid via '${paymentMethodName}' is selected`,
+                    trigger: `.paymentlines .paymentline.selected .payment-name:contains("${paymentMethodName}")`,
+                    run: () => {},
+                },
+                {
+                    content: `amount tendered in the line is '${amount}'`,
+                    trigger: `.paymentlines .paymentline.selected .payment-amount:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        totalIs(amount) {
+            return [
+                {
+                    content: `total is ${amount}`,
+                    trigger: `.total:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        totalDueIs(amount) {
+            return [
+                {
+                    content: `total due is ${amount}`,
+                    trigger: `.payment-status-total-due:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    class Execute {
+        pay(method, amount) {
+            const steps = [];
+            steps.push(...this._do.clickPaymentMethod(method));
+            for (let char of amount.split('')) {
+                steps.push(...this._do.pressNumpad(char));
+            }
+            steps.push(...this._check.validateButtonIsHighlighted());
+            steps.push(...this._do.clickValidate());
+            return steps;
+        }
+    }
+
+    return createTourMethods('PaymentScreen', Do, Check, Execute);
+});
+;
+
+/******************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/ProductConfiguratorTourMethods.js  *
+*  Lines: 77                                                                              *
+******************************************************************************************/
+odoo.define('point_of_sale.tour.ProductConfiguratorTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        pickRadio(name) {
+            return [
+                {
+                    content: `picking radio attribute with name ${name}`,
+                    trigger: `.product-configurator-popup .attribute-name-cell label:contains('${name}')`,
+                },
+            ];
+        }
+
+        pickSelect(name) {
+            return [
+                {
+                    content: `picking select attribute with name ${name}`,
+                    trigger: `.product-configurator-popup .configurator_select:has(option:contains('${name}'))`,
+                    run: `text ${name}`,
+                },
+            ];
+        }
+
+        pickColor(name) {
+            return [
+                {
+                    content: `picking color attribute with name ${name}`,
+                    trigger: `.product-configurator-popup .configurator_color[data-color='${name}']`,
+                },
+            ];
+        }
+
+        fillCustomAttribute(value) {
+            return [
+                {
+                    content: `filling custom attribute with value ${value}`,
+                    trigger: `.product-configurator-popup .custom_value`,
+                    run: `text ${value}`,
+                },
+            ];
+        }
+
+        confirmAttributes() {
+            return [
+                {
+                    content: `confirming product configuration`,
+                    trigger: `.product-configurator-popup .button.confirm`,
+                },
+            ];
+        }
+
+        cancelAttributes() {
+            return [
+                {
+                    content: `canceling product configuration`,
+                    trigger: `.product-configurator-popup .button.cancel`,
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'product configurator is shown',
+                    trigger: '.product-configurator-popup:not(:has(.oe_hidden))',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('ProductConfigurator', Do, Check);
+});
+;
+
+/************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/ProductScreenTourMethods.js  *
+*  Lines: 407                                                                       *
+************************************************************************************/
+odoo.define('point_of_sale.tour.ProductScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+    const { TextAreaPopup } = require('point_of_sale.tour.TextAreaPopupTourMethods');
+
+    class Do {
+        clickDisplayedProduct(name) {
+            return [
+                {
+                    content: `click product '${name}'`,
+                    trigger: `.product-list .product-name:contains("${name}")`,
+                },
+            ];
+        }
+
+        clickOrderline(name, quantity) {
+            return [
+                {
+                    content: `selecting orderline with product '${name}' and quantity '${quantity}'`,
+                    trigger: `.order .orderline:not(:has(.selected)) .product-name:contains("${name}") ~ .info-list em:contains("${quantity}")`,
+                },
+                {
+                    content: `orderline with product '${name}' and quantity '${quantity}' has been selected`,
+                    trigger: `.order .orderline.selected .product-name:contains("${name}") ~ .info-list em:contains("${quantity}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        clickSubcategory(name) {
+            return [
+                {
+                    content: `selecting '${name}' subcategory`,
+                    trigger: `.products-widget > .products-widget-control .category-simple-button:contains("${name}")`,
+                },
+                {
+                    content: `'${name}' subcategory selected`,
+                    trigger: `.breadcrumbs .breadcrumb-button:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        clickHomeCategory() {
+            return [
+                {
+                    content: `click Home subcategory`,
+                    trigger: `.breadcrumbs .breadcrumb-home`,
+                },
+            ];
+        }
+
+        /**
+         * Press the numpad in sequence based on the given space-separated keys.
+         * NOTE: Maximum of 2 characters because NumberBuffer only allows 2 consecutive
+         * fast inputs. Fast inputs is the case in tours.
+         *
+         * @param {String} keys space-separated numpad keys
+         */
+        pressNumpad(keys) {
+            const numberChars = '. 0 1 2 3 4 5 6 7 8 9'.split(' ');
+            const modeButtons = 'Qty Price Disc'.split(' ');
+            function generateStep(key) {
+                let trigger;
+                if (numberChars.includes(key)) {
+                    trigger = `.numpad .number-char:contains("${key}")`;
+                } else if (modeButtons.includes(key)) {
+                    trigger = `.numpad .mode-button:contains("${key}")`;
+                } else if (key === 'Backspace') {
+                    trigger = `.numpad .numpad-backspace`;
+                } else if (key === '+/-') {
+                    trigger = `.numpad .numpad-minus`;
+                }
+                return {
+                    content: `'${key}' pressed in product screen numpad`,
+                    trigger,
+                };
+            }
+            return keys.split(' ').map(generateStep);
+        }
+
+        clickPayButton(shouldCheck = true) {
+            const steps = [{ content: 'click pay button', trigger: '.product-screen .actionpad .button.pay' }];
+            if (shouldCheck) {
+                steps.push({
+                    content: 'now in payment screen',
+                    trigger: '.pos-content .payment-screen',
+                    run: () => {},
+                });
+            }
+            return steps;
+        }
+
+        clickPartnerButton() {
+            return [
+                { content: 'click customer button', trigger: '.actionpad .button.set-partner' },
+                {
+                    content: 'partner screen is shown',
+                    trigger: '.pos-content .partnerlist-screen',
+                    run: () => {},
+                },
+            ];
+        }
+
+        clickCustomer(name) {
+            return [
+                {
+                    content: `select customer '${name}'`,
+                    trigger: `.partnerlist-screen .partner-line td:contains("${name}")`,
+                },
+            ];
+        }
+
+        clickOrderlineCustomerNoteButton() {
+            return [
+                {
+                    content: 'click customer note button',
+                    trigger: '.control-buttons .control-button span:contains("Customer Note")',
+                }
+            ]
+        }
+        clickRefund() {
+            return [
+                {
+                    trigger: '.control-button:contains("Refund")',
+                },
+            ];
+        }
+        confirmOpeningPopup() {
+            return [{ trigger: '.opening-cash-control .button:contains("Open session")' }];
+        }
+        clickPricelistButton() {
+            return [{ trigger: '.o_pricelist_button' }];
+        }
+        selectPriceList(name) {
+            return [
+                {
+                    content: `select price list '${name}'`,
+                    trigger: `.selection-item:contains("${name}")`,
+                },
+            ];
+        }
+        enterOpeningAmount(amount) {
+            return [
+                {
+                    content: 'enter opening amount',
+                    trigger: '.cash-input-sub-section > .pos-input',
+                    run: 'text ' + amount,
+                },
+            ];
+        }
+        changeFiscalPosition(name) {
+            return [
+                {
+                    content: 'click fiscal position button',
+                    trigger: '.o_fiscal_position_button',
+                },
+                {
+                    content: 'fiscal position screen is shown',
+                    trigger: `.selection-item:contains("${name}")`,
+                },
+            ];
+        }
+        scan_barcode(barcode) {
+            return [
+                {
+                    content: `input barcode '${barcode}'`,
+                    trigger: "input.ean",
+                    run: `text ${barcode}`,
+                },
+                {
+                    content: `button scan barcode '${barcode}'`,
+                    trigger: "li.barcode",
+                    run: 'click',
+                }
+            ];
+        }
+        scan_ean13_barcode(barcode) {
+            return [
+                {
+                    content: `input barcode '${barcode}'`,
+                    trigger: "input.ean",
+                    run: `text ${barcode}`,
+                },
+                {
+                    content: `button scan EAN-13 barcode '${barcode}'`,
+                    trigger: "li.custom_ean",
+                    run: 'click',
+                }
+            ];
+        }
+        clickLotIcon() {
+            return [
+                {
+                    content: 'click lot icon',
+                    trigger: '.line-lot-icon',
+                },
+            ];
+        }
+        enterLotNumber(number) {
+            return [
+                {
+                    content: 'enter lot number',
+                    trigger: '.list-line-input:first()',
+                    run: 'text ' + number,
+                },
+                {
+                    content: 'click validate lot number',
+                    trigger: '.popup .button.confirm',
+                }
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'product screen is shown',
+                    trigger: '.product-screen',
+                    run: () => {},
+                },
+            ];
+        }
+        selectedOrderlineHas(name, quantity, price) {
+            const res = [
+                {
+                    // check first if the order widget is there and has orderlines
+                    content: 'order widget has orderlines',
+                    trigger: '.order .orderlines',
+                    run: () => {},
+                },
+                {
+                    content: `'${name}' is selected`,
+                    trigger: `.order .orderline.selected .product-name:contains("${name}")`,
+                    run: function () {}, // it's a check
+                },
+            ];
+            if (quantity) {
+                res.push({
+                    content: `selected line has ${quantity} quantity`,
+                    trigger: `.order .orderline.selected .product-name:contains("${name}") ~ .info-list em:contains("${quantity}")`,
+                    run: function () {}, // it's a check
+                });
+            }
+            if (price) {
+                res.push({
+                    content: `selected line has total price of ${price}`,
+                    trigger: `.order .orderline.selected .product-name:contains("${name}") ~ .price:contains("${price}")`,
+                    run: function () {}, // it's a check
+                });
+            }
+            return res;
+        }
+        orderIsEmpty() {
+            return [
+                {
+                    content: `order is empty`,
+                    trigger: `.order .order-empty`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        productIsDisplayed(name) {
+            return [
+                {
+                    content: `'${name}' should be displayed`,
+                    trigger: `.product-list .product-name:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        totalAmountIs(amount) {
+            return [
+                {
+                    content: `order total amount is '${amount}'`,
+                    trigger: `.order-container .order .summary .value:contains("${amount}")`,
+                    run: () => {},
+                }
+            ]
+        }
+        modeIsActive(mode) {
+            return [
+                {
+                    content: `'${mode}' is active`,
+                    trigger: `.numpad button.selected-mode:contains('${mode}')`,
+                    run: function () {},
+                },
+            ];
+        }
+        orderlineHasCustomerNote(name, quantity, note) {
+            return [
+                {
+                    content: `line has ${quantity} quantity`,
+                    trigger: `.order .orderline .product-name:contains("${name}") ~ .info-list em:contains("${quantity}")`,
+                    run: function () {}, // it's a check
+                },
+                {
+                    content: `line has '${note}' as customer note`,
+                    trigger: `.order .orderline .info-list .orderline-note:contains("${note}")`,
+                    run: function () {}, // it's a check
+                },
+            ]
+        }
+        checkSecondCashClosingDetailsLineAmount(amount, sign) {
+            return [
+                {
+                    content: 'Click close session button',
+                    trigger: '.fa-sign-out',
+                },
+                {
+                    content: 'Check closing details',
+                    trigger: `.cash-overview tr:nth-child(2) td:contains("${amount}")`,
+                    run: () => {}, // it's a check
+                },
+                {
+                    content: 'Check closing details',
+                    trigger: `.cash-overview tr:nth-child(2) .cash-sign:contains("${sign}")`,
+                    run: () => {}, // it's a check
+                },
+            ];
+        }
+        noDiscountApplied(originalPrice) {
+            return [
+                {
+                    content: 'no discount is applied',
+                    trigger: `.info:not(:contains(${originalPrice}))`,
+                },
+            ];
+        }
+        discountOriginalPriceIs(original_price) {
+            return [
+                {
+                    content: `discount original price is shown`,
+                    trigger: `s:contains('${original_price}')`,
+                    run: function () {},
+                },
+            ];
+        }
+        checkFirstLotNumber(number) {
+            return [
+                {
+                    content: 'Check lot number',
+                    trigger: `.list-line-input:propValue('${number}')`,
+                    run: () => {}, // it's a check
+                },
+            ];
+        }
+    }
+
+    class Execute {
+        /**
+         * Create an orderline for the given `productName` and `quantity`.
+         * - If `unitPrice` is provided, price of the product of the created line
+         *   is changed to that value.
+         * - If `expectedTotal` is provided, the created orderline (which is the currently
+         *   selected orderline) is checked if it contains the correct quantity and total
+         *   price.
+         *
+         * @param {string} productName
+         * @param {string} quantity
+         * @param {string} unitPrice
+         * @param {string} expectedTotal
+         */
+        addOrderline(productName, quantity, unitPrice = undefined, expectedTotal = undefined) {
+            const res = this._do.clickDisplayedProduct(productName);
+            if (unitPrice) {
+                res.push(...this._do.pressNumpad('Price'));
+                res.push(...this._check.modeIsActive('Price'));
+                res.push(...this._do.pressNumpad(unitPrice.toString().split('').join(' ')));
+                res.push(...this._do.pressNumpad('Qty'));
+                res.push(...this._check.modeIsActive('Qty'));
+            }
+            for (let char of (quantity.toString() == '1' ? '' : quantity.toString())) {
+                if ('.0123456789'.includes(char)) {
+                    res.push(...this._do.pressNumpad(char));
+                } else if ('-'.includes(char)) {
+                    res.push(...this._do.pressNumpad('+/-'));
+                }
+            }
+            if (expectedTotal) {
+                res.push(...this._check.selectedOrderlineHas(productName, quantity, expectedTotal));
+            } else {
+                res.push(...this._check.selectedOrderlineHas(productName, quantity));
+            }
+            return res;
+        }
+        addMultiOrderlines(...list) {
+            const steps = [];
+            for (let [product, qty, price] of list) {
+                steps.push(...this.addOrderline(product, qty, price));
+            }
+            return steps;
+        }
+        addCustomerNote(note) {
+            const res = [];
+            res.push(...this._do.clickOrderlineCustomerNoteButton());
+            res.push(...TextAreaPopup._do.inputText(note));
+            res.push(...TextAreaPopup._do.clickConfirm());
+            return res;
+        }
+    }
+
+    return createTourMethods('ProductScreen', Do, Check, Execute);
+});
+;
+
+/************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/ReceiptScreenTourMethods.js  *
+*  Lines: 110                                                                       *
+************************************************************************************/
+odoo.define('point_of_sale.tour.ReceiptScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickNextOrder() {
+            return [
+                {
+                    content: 'go to next screen',
+                    trigger: '.receipt-screen .button.next.highlight',
+                },
+            ];
+        }
+        setEmail(email) {
+            return [
+                {
+                    trigger: '.receipt-screen .input-email input',
+                    run: `text ${email}`,
+                },
+            ];
+        }
+        clickSend(isHighlighted = true) {
+            return [
+                {
+                    trigger: `.receipt-screen .input-email .send${isHighlighted ? '.highlight' : ''}`,
+                },
+            ];
+        }
+        clickBack() {
+            return [
+                {
+                    trigger: '.receipt-screen .button.back',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'receipt screen is shown',
+                    trigger: '.pos .receipt-screen',
+                    run: () => {},
+                },
+            ];
+        }
+
+        receiptIsThere() {
+            return [
+                {
+                    content: 'there should be the receipt',
+                    trigger: '.receipt-screen .pos-receipt',
+                    run: () => {},
+                },
+            ];
+        }
+
+        totalAmountContains(value) {
+            return [
+                {
+                    trigger: `.receipt-screen .top-content h1:contains("${value}")`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        emailIsSuccessful() {
+            return [
+                {
+                    trigger: `.receipt-screen .notice .successful`,
+                    run: () => {},
+                },
+            ];
+        }
+
+        customerNoteIsThere(note) {
+            return [
+                {
+                    trigger: `.receipt-screen .orderlines .pos-receipt-left-padding:contains("${note}")`
+                }
+            ]
+        }
+        discountAmountIs(value) {
+            return [
+                {
+                    trigger: `.pos-receipt>div:contains("Discounts")>span:contains("${value}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        noOrderlineContainsDiscount() {
+            return [
+                {
+                    trigger: `.orderlines:not(:contains('->'))`,
+                    run: () => { },
+                },
+            ];
+        }
+    }
+
+    class Execute {
+        nextOrder() {
+            return [...this._check.isShown(), ...this._do.clickNextOrder()];
+        }
+    }
+
+    return createTourMethods('ReceiptScreen', Do, Check, Execute);
+});
+;
+
+/*************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/SelectionPopupTourMethods.js  *
+*  Lines: 39                                                                         *
+*************************************************************************************/
+odoo.define('point_of_sale.tour.SelectionPopupTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickItem(name) {
+            return [
+                {
+                    content: `click selection '${name}'`,
+                    trigger: `.selection-item:contains("${name}")`,
+                },
+            ];
+        }
+    }
+
+    class Check {
+        hasSelectionItem(name) {
+            return [
+                {
+                    content: `selection popup has '${name}'`,
+                    trigger: `.selection-item:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        isShown() {
+            return [
+                {
+                    content: 'selection popup is shown',
+                    trigger: '.modal-dialog .popup-selection',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('SelectionPopup', Do, Check);
+});
+;
+
+/************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/TextAreaPopupTourMethods.js  *
+*  Lines: 39                                                                        *
+************************************************************************************/
+odoo.define('point_of_sale.tour.TextAreaPopupTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        inputText(val) {
+            return [
+                {
+                    content: `input text '${val}'`,
+                    trigger: `.modal-dialog .popup-textarea textarea`,
+                    run: `text ${val}`,
+                },
+            ];
+        }
+        clickConfirm() {
+            return [
+                {
+                    content: 'confirm text input popup',
+                    trigger: '.modal-dialog .confirm',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'text input popup is shown',
+                    trigger: '.modal-dialog .popup-textarea',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('TextAreaPopup', Do, Check);
+});
+;
+
+/*************************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/TextInputPopupTourMethods.js  *
+*  Lines: 39                                                                         *
+*************************************************************************************/
+odoo.define('point_of_sale.tour.TextInputPopupTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        inputText(val) {
+            return [
+                {
+                    content: `input text '${val}'`,
+                    trigger: `.modal-dialog .popup-textinput input`,
+                    run: `text ${val}`,
+                },
+            ];
+        }
+        clickConfirm() {
+            return [
+                {
+                    content: 'confirm text input popup',
+                    trigger: '.modal-dialog .confirm',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        isShown() {
+            return [
+                {
+                    content: 'text input popup is shown',
+                    trigger: '.modal-dialog .popup-textinput',
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    return createTourMethods('TextInputPopup', Do, Check);
+});
+;
+
+/***********************************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/TicketScreenTourMethods.js  *
+*  Lines: 195                                                                      *
+***********************************************************************************/
+odoo.define('point_of_sale.tour.TicketScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+
+    class Do {
+        clickNewTicket() {
+            return [{ trigger: '.ticket-screen .highlight' }];
+        }
+        clickDiscard() {
+            return [{ trigger: '.ticket-screen button.discard' }];
+        }
+        selectOrder(orderName) {
+            return [
+                {
+                    trigger: `.ticket-screen .order-row > .col:nth-child(2):contains("${orderName}")`,
+                },
+            ];
+        }
+        deleteOrder(orderName) {
+            return [
+                {
+                    trigger: `.ticket-screen .orders > .order-row > .col:contains("${orderName}") ~ .col[name="delete"]`,
+                },
+            ];
+        }
+        selectFilter(name) {
+            return [
+                {
+                    trigger: `.pos-search-bar .filter`,
+                },
+                {
+                    trigger: `.pos-search-bar .filter ul`,
+                    run: () => {},
+                },
+                {
+                    trigger: `.pos-search-bar .filter ul li:contains("${name}")`,
+                },
+            ];
+        }
+        search(field, searchWord) {
+            return [
+                {
+                    trigger: '.pos-search-bar input',
+                    run: `text ${searchWord}`,
+                },
+                {
+                    /**
+                     * Manually trigger keyup event to show the search field list
+                     * because the previous step do not trigger keyup event.
+                     */
+                    trigger: '.pos-search-bar input',
+                    run: function () {
+                        document
+                            .querySelector('.pos-search-bar input')
+                            .dispatchEvent(new KeyboardEvent('keyup', { key: '' }));
+                    },
+                },
+                {
+                    trigger: `.pos-search-bar .search ul li:contains("${field}")`,
+                },
+            ];
+        }
+        settleTips() {
+            return [
+                {
+                    trigger: '.ticket-screen .buttons .settle-tips',
+                },
+            ];
+        }
+        clickControlButton(name) {
+            return [
+                {
+                    trigger: `.ticket-screen .control-button:contains("${name}")`,
+                },
+            ];
+        }
+        clickOrderline(name) {
+            return [
+                {
+                    trigger: `.ticket-screen .orderline:not(:has(.selected)) .product-name:contains("${name}")`,
+                },
+                {
+                    trigger: `.ticket-screen .orderline.selected .product-name:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        pressNumpad(key) {
+            let trigger;
+            if ('.0123456789'.includes(key)) {
+                trigger = `.numpad .number-char:contains("${key}")`;
+            } else if (key === 'Backspace') {
+                trigger = `.numpad .numpad-backspace`;
+            } else if (key === '+/-') {
+                trigger = `.numpad .numpad-minus`;
+            }
+            return [
+                {
+                    trigger,
+                },
+            ];
+        }
+        confirmRefund() {
+            return [
+                {
+                    trigger: '.ticket-screen .button.pay',
+                },
+            ];
+        }
+    }
+
+    class Check {
+        checkStatus(orderName, status) {
+            return [
+                {
+                    trigger: `.ticket-screen .order-row > .col:nth-child(2):contains("${orderName}") ~ .col:nth-child(6):contains(${status})`,
+                    run: () => {},
+                },
+            ];
+        }
+        /**
+         * Check if the nth row contains the given string.
+         * Note that 1st row is the header-row.
+         */
+        nthRowContains(n, string) {
+            return [
+                {
+                    trigger: `.ticket-screen .orders > .order-row:nth-child(${n}):contains("${string}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        noNewTicketButton() {
+            return [
+                {
+                    trigger: '.ticket-screen .controls .buttons:nth-child(1):has(.discard)',
+                    run: () => {},
+                },
+            ];
+        }
+        orderWidgetIsNotEmpty() {
+            return [
+                {
+                    trigger: '.ticket-screen:not(:has(.order-empty))',
+                    run: () => {},
+                },
+            ];
+        }
+        filterIs(name) {
+            return [
+                {
+                    trigger: `.ticket-screen .pos-search-bar .filter span:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        partnerIs(name) {
+            return [
+                {
+                    trigger: `.ticket-screen .set-partner:contains("${name}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        toRefundTextContains(text) {
+            return [
+                {
+                    trigger: `.ticket-screen .to-refund-highlight:contains("${text}")`,
+                    run: () => {},
+               },
+            ];
+        }
+        refundedNoteContains(text) {
+            return [
+                {
+                    trigger: `.ticket-screen .refund-note:contains("${text}")`,
+                    run: () => {},
+                },
+            ];
+        }
+        tipContains(amount) {
+            return [
+                {
+                    trigger: `.ticket-screen .tip-cell:contains("${amount}")`,
+                    run: () => {},
+                },
+            ];
+        }
+    }
+
+    class Execute {}
+
+    return createTourMethods('TicketScreen', Do, Check, Execute);
+});
+;
+
+/*****************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/helpers/utils.js  *
+*  Lines: 153                                                    *
+*****************************************************************/
+odoo.define('point_of_sale.tour.utils', function (require) {
+    'use strict';
+
+    const config = require('web.config');
+
+    /**
+     * USAGE
+     * -----
+     *
+     * ```
+     * const { startSteps, getSteps, createTourMethods } = require('point_of_sale.utils');
+     * const { Other } = require('point_of_sale.tour.OtherMethods');
+     *
+     * // 1. Define classes Do, Check and Execute having methods that
+     * //    each return array of tour steps.
+     * class Do {
+     *   click() {
+     *      return [{ content: 'click button', trigger: '.button' }];
+     *   }
+     * }
+     * class Check {
+     *   isHighligted() {
+     *      return [{ content: 'button is highlighted', trigger: '.button.highlight', run: () => {} }];
+     *   }
+     * }
+     * // Notice that Execute has access to methods defined in Do and Check classes
+     * // Also, we can compose steps from other module.
+     * class Execute {
+     *   complexSteps() {
+     *      return [...this._do.click(), ...this._check.isHighlighted(), ...Other._exec.complicatedSteps()];
+     *   }
+     * }
+     *
+     * // 2. Instantiate these class definitions using `createTourMethods`.
+     * //    The returned object gives access to the defined methods above
+     * //    thru the do, check and exec properties.
+     * //    - do gives access to the methods defined in Do class
+     * //    - check gives access to the methods defined in Check class
+     * //    - exec gives access to the methods defined in Execute class
+     * const Screen = createTourMethods('Screen', Do, Check, Execute);
+     *
+     * // 3. Call `startSteps` to start empty steps.
+     * startSteps();
+     *
+     * // 4. Call the tour methods to populate the steps created by `startSteps`.
+     * Screen.do.click();               // return of this method call is added to steps created by startSteps
+     * Screen.check.isHighlighted()     // same as above
+     * Screen.exec.complexSteps()     // same as above
+     *
+     * // 5. Call `getSteps` which returns the generated tour steps.
+     * const steps = getSteps();
+     * ```
+     */
+    let steps = [];
+
+    function startSteps() {
+        // always start by waiting for loading to finish
+        steps = [
+            {
+                content: 'wait for loading to finish',
+                trigger: 'body:not(:has(.loader))',
+                run: function () {},
+            },
+        ];
+    }
+
+    function getSteps() {
+        return steps;
+    }
+
+    // this is the method decorator
+    // when the method is called, the generated steps are added
+    // to steps
+    const methodProxyHandler = {
+        apply(target, thisArg, args) {
+            const res = target.call(thisArg, ...args);
+            if (config.isDebug()) {
+                // This step is added before the real steps.
+                // Very useful when debugging because we know which
+                // method call failed and what were the parameters.
+                const constructor = thisArg.constructor.name.split(' ')[1];
+                const methodName = target.name.split(' ')[1];
+                const argList = args
+                    .map((a) => (typeof a === 'string' ? `'${a}'` : `${a}`))
+                    .join(', ');
+                steps.push({
+                    content: `DOING "${constructor}.${methodName}(${argList})"`,
+                    trigger: '.pos',
+                    run: () => {},
+                });
+            }
+            steps.push(...res);
+            return res;
+        },
+    };
+
+    // we proxy get of the method to decorate the method call
+    const proxyHandler = {
+        get(target, key) {
+            const method = target[key];
+            if (!method) {
+                throw new Error(`Tour method '${key}' is not available.`);
+            }
+            return new Proxy(method.bind(target), methodProxyHandler);
+        },
+    };
+
+    /**
+     * Creates an object with `do`, `check` and `exec` properties which are instances of
+     * the given `Do`, `Check` and `Execute` classes, respectively. Calling methods
+     * automatically adds the returned steps to the steps created by `startSteps`.
+     *
+     * There are however underscored version (_do, _check, _exec).
+     * Calling methods thru the underscored version does not automatically
+     * add the returned steps to the current steps array. Useful when composing
+     * steps from other methods.
+     *
+     * @param {String} name
+     * @param {Function} Do class containing methods which return array of tour steps
+     * @param {Function} Check similar to Do class but the steps are mainly for checking
+     * @param {Function} Execute class containing methods which return array of tour steps
+     *                   but has access to methods of Do and Check classes via .do and .check,
+     *                   respectively. Here, we define methods that return tour steps based
+     *                   on the combination of steps from Do and Check.
+     */
+    function createTourMethods(name, Do, Check = class {}, Execute = class {}) {
+        Object.defineProperty(Do, 'name', { value: `${name}.do` });
+        Object.defineProperty(Check, 'name', { value: `${name}.check` });
+        Object.defineProperty(Execute, 'name', {
+            value: `${name}.exec`,
+        });
+        const methods = { do: new Do(), check: new Check(), exec: new Execute() };
+        // Allow Execute to have access to methods defined in Do and Check
+        // via do and exec, respectively.
+        methods.exec._do = methods.do;
+        methods.exec._check = methods.check;
+        return {
+            Do,
+            Check,
+            Execute,
+            [name]: {
+                do: new Proxy(methods.do, proxyHandler),
+                check: new Proxy(methods.check, proxyHandler),
+                exec: new Proxy(methods.exec, proxyHandler),
+                _do: methods.do,
+                _check: methods.check,
+                _exec: methods.exec,
+            },
+        };
+    }
+
+    return { startSteps, getSteps, createTourMethods };
+});
+;
+
+/*****************************************************************
+*  Filepath: /point_of_sale/static/tests/tours/point_of_sale.js  *
+*  Lines: 408                                                    *
+*****************************************************************/
+/* global posmodel */
+odoo.define('point_of_sale.tour.pricelist', function (require) {
+    "use strict";
+
+    var Tour = require('web_tour.tour');
+    var utils = require('web.utils');
+    var round_di = utils.round_decimals;
+
+    function assert (condition, message) {
+        if (! condition) {
+            throw message || "Assertion failed";
+        }
+    }
+
+    function assertProductPrice(product, pricelist_name, quantity, expected_price) {
+        return function () {
+            var pricelist = _.findWhere(posmodel.pricelists, {name: pricelist_name});
+            var frontend_price = product.get_price(pricelist, quantity);
+            frontend_price = round_di(frontend_price, posmodel.dp['Product Price']);
+
+            var diff = Math.abs( expected_price - frontend_price );
+
+            assert(diff < 0.001,
+                JSON.stringify({
+                    product: product.id,
+                    product_display_name: product.display_name,
+                    pricelist_name: pricelist_name,
+                    quantity: quantity
+                }) + ' DOESN\'T MATCH -> ' + expected_price + ' != ' + frontend_price);
+
+            return Promise.resolve();
+        };
+    }
+
+    // The global posmodel is only present when the posmodel is instanciated
+    // So, wait for everythiong to be loaded
+    var steps = [{ // Leave category displayed by default
+        content: 'waiting for loading to finish',
+        extra_trigger: 'body .pos:not(:has(.loader))', // Pos has finished loading
+        trigger: 'body:not(:has(.o_loading_indicator))', // WebClient has finished Loading
+        run: function () {
+            var product_wall_shelf = posmodel.db.search_product_in_category(0, 'Wall Shelf Unit')[0];
+            var product_small_shelf = posmodel.db.search_product_in_category(0, 'Small Shelf')[0];
+            var product_magnetic_board = posmodel.db.search_product_in_category(0, 'Magnetic Board')[0];
+            var product_monitor_stand = posmodel.db.search_product_in_category(0, 'Monitor Stand')[0];
+            var product_desk_pad = posmodel.db.search_product_in_category(0, 'Desk Pad')[0];
+            var product_letter_tray = posmodel.db.search_product_in_category(0, 'Letter Tray')[0];
+            var product_whiteboard = posmodel.db.search_product_in_category(0, 'Whiteboard')[0];
+
+            assertProductPrice(product_letter_tray, 'Public Pricelist', 0, 4.8)()
+                .then(assertProductPrice(product_letter_tray, 'Public Pricelist', 1, 4.8))
+                .then(assertProductPrice(product_letter_tray, 'Fixed', 1, 1))
+                .then(assertProductPrice(product_wall_shelf, 'Fixed', 1, 2))
+                .then(assertProductPrice(product_small_shelf, 'Fixed', 1, 13.95))
+                .then(assertProductPrice(product_wall_shelf, 'Percentage', 1, 0))
+                .then(assertProductPrice(product_small_shelf, 'Percentage', 1, 0.03))
+                .then(assertProductPrice(product_magnetic_board, 'Percentage', 1, 1.98))
+                .then(assertProductPrice(product_wall_shelf, 'Formula', 1, 6.86))
+                .then(assertProductPrice(product_small_shelf, 'Formula', 1, 2.99))
+                .then(assertProductPrice(product_magnetic_board, 'Formula', 1, 11.98))
+                .then(assertProductPrice(product_monitor_stand, 'Formula', 1, 8.19))
+                .then(assertProductPrice(product_desk_pad, 'Formula', 1, 6.98))
+                .then(assertProductPrice(product_wall_shelf, 'min_quantity ordering', 1, 2))
+                .then(assertProductPrice(product_wall_shelf, 'min_quantity ordering', 2, 1))
+                .then(assertProductPrice(product_letter_tray, 'Category vs no category', 1, 2))
+                .then(assertProductPrice(product_letter_tray, 'Category', 1, 2))
+                .then(assertProductPrice(product_wall_shelf, 'Product template', 1, 1))
+                .then(assertProductPrice(product_wall_shelf, 'Dates', 1, 2))
+                .then(assertProductPrice(product_small_shelf, 'Pricelist base rounding', 1, 13.95))
+                .then(assertProductPrice(product_whiteboard, 'Public Pricelist', 1, 3.2))
+                .then(function () {
+                    $('.pos').addClass('done-testing');
+                });
+        },
+    }, {
+        trigger: '.opening-cash-control .button:contains("Open session")',
+    }];
+
+    steps = steps.concat([{
+        content: "wait for unit tests to finish",
+        trigger: ".pos.done-testing",
+        run: function () {}, // it's a check
+    }, {
+        content: "click category switch",
+        trigger: ".breadcrumb-home",
+        run: 'click',
+    }, {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "verify default pricelist is set",
+        trigger: ".selection-item.selected:contains('Public Pricelist')",
+        run: function () {}, // it's a check
+    }, {
+        content: "select fixed pricelist",
+        trigger: ".selection-item:contains('Fixed')",
+    }, {
+        content: "open partner list",
+        trigger: "button.set-partner",
+    }, {
+        content: "select Deco Addict",
+        trigger: ".partner-line:contains('Deco Addict')",
+    }, {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "verify pricelist changed",
+        trigger: ".selection-item.selected:contains('Public Pricelist')",
+        run: function () {}, // it's a check
+    }, {
+        content: "cancel pricelist dialog",
+        trigger: ".button.cancel:visible",
+    }, {
+        content: "open customer list",
+        trigger: "button.set-partner",
+    }, {
+        content: "select Lumber Inc",
+        trigger: ".partner-line:contains('Lumber Inc')",
+    },  {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "verify pricelist remained public pricelist ('Not loaded' is not available)",
+        trigger: ".selection-item.selected:contains('Public Pricelist')",
+        run: function () {}, // it's a check
+    }, {
+        content: "cancel pricelist dialog",
+        trigger: ".button.cancel:visible",
+    },  {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "select fixed pricelist",
+        trigger: ".selection-item:contains('min_quantity ordering')",
+    }, {
+        content: "order 1 kg shelf",
+        trigger: ".product:contains('Wall Shelf')",
+    }, {
+        content: "change qty to 2 kg",
+        trigger: ".numpad button.input-button:visible:contains('2')",
+    }, {
+        content: "qty of Wall Shelf line should be 2",
+        trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Wall Shelf')",
+        extra_trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Wall Shelf') ~ .info-list .info em:contains('2.0')",
+        run: function() {},
+    }, {
+        content: "verify that unit price of shelf changed to $1",
+        trigger: ".total > .value:contains('$ 2.00')",
+        run: function() {},
+    }, {
+        content: "order different shelf",
+        trigger: ".product:contains('Small Shelf')",
+    }, {
+        content: "Small Shelf line should be selected with quantity 1",
+        trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Small Shelf')",
+        extra_trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Small Shelf') ~ .info-list .info em:contains('1.0')",
+        run: function() {}
+    }, {
+        content: "change to price mode",
+        trigger: ".numpad button:contains('Price')",
+    }, {
+        content: "make sure price mode is activated",
+        trigger: ".numpad button.selected-mode:contains('Price')",
+        run: function() {},
+    }, {
+        content: "manually override the unit price of these shelf to $5",
+        trigger: ".numpad button.input-button:visible:contains('5')",
+    }, {
+        content: "Small Shelf line should be selected with unit price of 5",
+        trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Small Shelf')",
+        extra_trigger: ".order-container .orderlines .orderline.selected .product-name:contains('Small Shelf') ~ .price:contains('5.0')",
+    }, {
+        content: "change back to qty mode",
+        trigger: ".numpad button:contains('Qty')",
+    }, {
+        content: "make sure qty mode is activated",
+        trigger: ".numpad button.selected-mode:contains('Qty')",
+        run: function() {},
+    }, {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "select public pricelist",
+        trigger: ".selection-item:contains('Public Pricelist')",
+    }, {
+        content: "verify that the boni shelf have been recomputed and the shelf have not (their price was manually overridden)",
+        trigger: ".total > .value:contains('$ 8.96')",
+    }, {
+        content: "click pricelist button",
+        trigger: ".control-button.o_pricelist_button",
+    }, {
+        content: "select fixed pricelist",
+        trigger: ".selection-item:contains('min_quantity ordering')",
+    }, {
+        content: "close the Point of Sale frontend",
+        trigger: ".header-button",
+    }, {
+        content: "confirm closing the frontend",
+        trigger: ".header-button",
+        run: function() {}, //it's a check,
+    }]);
+
+    Tour.register('pos_pricelist', { test: true, url: '/pos/ui' }, steps);
+});
+
+odoo.define('point_of_sale.tour.acceptance', function (require) {
+    "use strict";
+
+    var Tour = require("web_tour.tour");
+
+    function add_product_to_order(product_name) {
+        return [{
+            content: 'buy ' + product_name,
+            trigger: '.product-list .product-name:contains("' + product_name + '")',
+        }, {
+            content: 'the ' + product_name + ' have been added to the order',
+            trigger: '.order .product-name:contains("' + product_name + '")',
+            run: function () {},
+        }];
+    }
+
+    function set_fiscal_position_on_order(fp_name) {
+        return [{
+            content: 'set fiscal position',
+            trigger: '.control-button.o_fiscal_position_button',
+        }, {
+            content: 'choose fiscal position ' + fp_name + ' to add to the order',
+            trigger: '.popups .popup .selection .selection-item:contains("' + fp_name + '")',
+        }, {
+            content: 'the fiscal position ' + fp_name + ' has been set to the order',
+            trigger: '.control-button.o_fiscal_position_button:contains("' + fp_name + '")',
+            run: function () {},
+        }];
+    }
+
+    function press_payment_numpad(val) {
+        return [{
+            content: `press ${val} on payment screen numpad`,
+            trigger: `.payment-numpad .input-button:contains("${val}"):visible`,
+        }]
+    }
+
+    function press_product_numpad(val) {
+        return [{
+            content: `press ${val} on product screen numpad`,
+            trigger: `.numpad .input-button:contains("${val}"):visible`,
+        }]
+    }
+
+    function selected_payment_has(name, val) {
+        return [{
+            content: `selected payment is ${name} and has ${val}`,
+            trigger: `.paymentlines .paymentline.selected .payment-name:contains("${name}")`,
+            extra_trigger: `.paymentlines .paymentline.selected .payment-name:contains("${name}") ~ .payment-amount:contains("${val}")`,
+            run: function () {},
+        }]
+    }
+
+    function selected_orderline_has({ product, price = null, quantity = null }) {
+        const result = [];
+        if (price !== null) {
+            result.push({
+                content: `Selected line has product '${product}' and price '${price}'`,
+                trigger: `.order-container .orderlines .orderline.selected .product-name:contains("${product}") ~ span.price:contains("${price}")`,
+                run: function () {},
+            });
+        }
+        if (quantity !== null) {
+            result.push({
+                content: `Selected line has product '${product}' and quantity '${quantity}'`,
+                trigger: `.order-container .orderlines .orderline.selected .product-name:contains('${product}') ~ .info-list .info em:contains('${quantity}')`,
+                run: function () {},
+            });
+        }
+        return result;
+    }
+
+    function verify_order_total(total_str) {
+        return [{
+            content: 'order total contains ' + total_str,
+            trigger: '.order .total .value:contains("' + total_str + '")',
+            run: function () {}, // it's a check
+        }];
+    }
+
+    function goto_payment_screen_and_select_payment_method() {
+        return [{
+            content: "go to payment screen",
+            trigger: '.button.pay',
+        }, {
+            content: "pay with cash",
+            trigger: '.paymentmethod:contains("Cash")',
+        }];
+    }
+
+    function finish_order() {
+        return [{
+            content: "validate the order",
+            trigger: '.payment-screen .button.next.highlight:visible',
+        }, {
+            content: "verify that the order has been successfully sent to the backend",
+            trigger: ".js_connected:visible",
+            run: function () {},
+        }, {
+            content: "click Next Order",
+            trigger: '.receipt-screen .button.next.highlight:visible',
+        }, {
+            content: "check if we left the receipt screen",
+            trigger: '.pos-content .screen:not(:has(.receipt-screen))',
+            run: function () {},
+        }];
+    }
+
+    var steps = [{
+            content: 'waiting for loading to finish',
+            trigger: 'body:not(:has(.loader))',
+            run: function () {},
+        }, { // Leave category displayed by default
+            content: "click category switch",
+            trigger: ".breadcrumb-home",
+        }];
+
+    steps = steps.concat(add_product_to_order('Desk Organizer'));
+    steps = steps.concat(verify_order_total('5.10'));
+
+    steps = steps.concat(add_product_to_order('Desk Organizer'));
+    steps = steps.concat(verify_order_total('10.20'));
+    steps = steps.concat(goto_payment_screen_and_select_payment_method());
+
+    /*  add payment line of only 5.20
+        status:
+            order-total := 10.20
+            total-payment := 11.70
+        expect:
+            remaining := 0.00
+            change := 1.50
+    */
+    steps = steps.concat(press_payment_numpad('5'));
+    steps = steps.concat(selected_payment_has('Cash', '5.0'));
+    steps = steps.concat([{
+        content: "verify remaining",
+        trigger: '.payment-status-remaining .amount:contains("5.20")',
+        run: function () {},
+    }, {
+        content: "verify change",
+        trigger: '.payment-status-change .amount:contains("0.00")',
+        run: function () {},
+    }]);
+
+    /*  make additional payment line of 6.50
+        status:
+            order-total := 10.20
+            total-payment := 11.70
+        expect:
+            remaining := 0.00
+            change := 1.50
+    */
+    steps = steps.concat([{
+        content: "pay with cash",
+        trigger: '.paymentmethod:contains("Cash")',
+    }]);
+    steps = steps.concat(selected_payment_has('Cash', '5.2'));
+    steps = steps.concat(press_payment_numpad('6'))
+    steps = steps.concat(selected_payment_has('Cash', '6.0'));
+    steps = steps.concat([{
+        content: "verify remaining",
+        trigger: '.payment-status-remaining .amount:contains("0.00")',
+        run: function () {},
+    }, {
+        content: "verify change",
+        trigger: '.payment-status-change .amount:contains("0.80")',
+        run: function () {},
+    }]);
+
+    steps = steps.concat(finish_order());
+
+    // test opw-672118 orderline subtotal rounding
+    steps = steps.concat(add_product_to_order('Desk Organizer'));
+    steps = steps.concat(selected_orderline_has({product: 'Desk Organizer', quantity: '1.0'}));
+    steps = steps.concat(press_product_numpad('.'))
+    steps = steps.concat(selected_orderline_has({product: 'Desk Organizer', quantity: '0.0', price: '0.0'}));
+    steps = steps.concat(press_product_numpad('9'))
+    steps = steps.concat(selected_orderline_has({product: 'Desk Organizer', quantity: '0.9', price: '4.59'}));
+    steps = steps.concat(press_product_numpad('9'))
+    steps = steps.concat(selected_orderline_has({product: 'Desk Organizer', quantity: '0.99', price: '5.05'}));
+    steps = steps.concat(goto_payment_screen_and_select_payment_method());
+    steps = steps.concat(selected_payment_has('Cash', '5.05'));
+    steps = steps.concat(finish_order());
+
+    // Test fiscal position one2many map (align with backend)
+    steps = steps.concat(add_product_to_order('Letter Tray'));
+    steps = steps.concat(selected_orderline_has({product: 'Letter Tray', quantity: '1.0'}));
+    steps = steps.concat(verify_order_total('5.28'));
+    steps = steps.concat(set_fiscal_position_on_order('FP-POS-2M'));
+    steps = steps.concat(verify_order_total('5.52'));
+
+    steps = steps.concat([{
+        content: "open closing the Point of Sale frontend popup",
+        trigger: ".header-button",
+    }, {
+        content: "close the Point of Sale frontend",
+        trigger: ".close-pos-popup .button:contains('Discard')",
+        run: function() {}, //it's a check,
+    }]);
+
+    Tour.register('pos_basic_order', { test: true, url: '/pos/ui' }, steps);
+
+});
+;
+
+/*************************************************************************
+*  Filepath: /pos_sale/static/tests/helpers/ProductScreenTourMethods.js  *
+*  Lines: 65                                                             *
+*************************************************************************/
+odoo.define('pos_sale.tour.ProductScreenTourMethods', function (require) {
+    'use strict';
+
+    const { createTourMethods } = require('point_of_sale.tour.utils');
+    const { Do, Check, Execute } = require('point_of_sale.tour.ProductScreenTourMethods');
+
+    class DoExt extends Do {
+        clickQuotationButton() {
+            return [
+                {
+                    content: 'click quotation button',
+                    trigger: '.o_sale_order_button',
+                }
+            ];
+        }
+
+        selectFirstOrder() {
+            return [
+                {
+                    content: `select order`,
+                    trigger: `.order-row .col.name:first`,
+                },
+                {
+                    content: `click on select the order`,
+                    trigger: `.selection-item:contains('Settle the order')`,
+                }
+            ];
+        }
+
+        selectNthOrder(n) {
+            return [
+                {
+                    content: `select order`,
+                    trigger: `.order-list .order-row:nth-child(${n})`,
+                },
+                {
+                    content: `click on select the order`,
+                    trigger: `.selection-item:contains('Settle the order')`,
+                }
+            ];
+        }
+
+        downPaymentFirstOrder() {
+            return [
+                {
+                    content: `select order`,
+                    trigger: `.order-row .col.name:first`,
+                },
+                {
+                    content: `click on select the order`,
+                    trigger: `.selection-item:contains('Apply a down payment')`,
+                },
+                {
+                    content: `click on +10 button`,
+                    trigger: `.mode-button.add:contains('+10')`,
+                },
+                {
+                    content: `click on ok button`,
+                    trigger: `.button.confirm`,
+                }
+            ];
+        }
+    }
+    return createTourMethods('ProductScreen', DoExt, Check, Execute);
+});
+;
+
+/*************************************************************
+*  Filepath: /pos_sale/static/tests/tours/pos_sale_tours.js  *
+*  Lines: 115                                                *
+*************************************************************/
+odoo.define('pos_sale.tour', function (require) {
+    'use strict';
+
+    const { Chrome } = require('point_of_sale.tour.ChromeTourMethods');
+    const { PaymentScreen } = require('point_of_sale.tour.PaymentScreenTourMethods');
+    const { ProductScreen } = require('pos_sale.tour.ProductScreenTourMethods');
+    const { ReceiptScreen } = require('point_of_sale.tour.ReceiptScreenTourMethods');
+    const { TicketScreen } = require('point_of_sale.tour.TicketScreenTourMethods');
+    const { getSteps, startSteps } = require('point_of_sale.tour.utils');
+    const Tour = require('web_tour.tour');
+
+    // signal to start generating steps
+    // when finished, steps can be taken from getSteps
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickQuotationButton();
+    ProductScreen.do.selectFirstOrder();
+    ProductScreen.check.selectedOrderlineHas('Pizza Chicken', 9);
+    ProductScreen.do.pressNumpad('Qty 2'); // Change the quantity of the product to 2
+    ProductScreen.check.selectedOrderlineHas('Pizza Chicken', 2);
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    Chrome.do.clickTicketButton();
+
+    Tour.register('PosSettleOrder', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickQuotationButton();
+    // The second item in the list is the first sale.order.
+    ProductScreen.do.selectNthOrder(2);
+    ProductScreen.check.selectedOrderlineHas('product1', 1);
+    ProductScreen.check.totalAmountIs("10.00");
+
+    ProductScreen.do.clickQuotationButton();
+    // The first item in the list is the second sale.order.
+    // Selecting the 2nd sale.order should use a new order,
+    // therefore, the total amount will change.
+    ProductScreen.do.selectNthOrder(1);
+    ProductScreen.check.selectedOrderlineHas('product2', 1);
+    ProductScreen.check.totalAmountIs("11.00");
+
+    Tour.register('PosSettleOrderIncompatiblePartner', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickQuotationButton();
+    ProductScreen.do.selectFirstOrder();
+    ProductScreen.do.clickOrderline("Product A", "1");
+    ProductScreen.check.selectedOrderlineHas('Product A', '1.00');
+    ProductScreen.do.clickOrderline("Product B", "1");
+    ProductScreen.do.pressNumpad('Qty 0');
+    ProductScreen.check.selectedOrderlineHas('Product B', '0.00');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+
+    Tour.register('PosSettleOrder2', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickQuotationButton();
+    ProductScreen.do.selectFirstOrder();
+    ProductScreen.do.clickOrderline("Product A", "1");
+    ProductScreen.check.selectedOrderlineHas('Product A', '1.00');
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.check.remainingIs('0.0');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.check.isShown();
+
+    Tour.register('PosSettleOrder3', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.confirmOpeningPopup();
+    ProductScreen.do.clickQuotationButton();
+    ProductScreen.do.selectFirstOrder();
+    ProductScreen.check.totalAmountIs(40);
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Bank');
+    PaymentScreen.do.clickValidate();
+    Chrome.do.clickTicketButton();
+
+    Tour.register('PosSettleOrderRealTime', { test: true, url: '/pos/ui' }, getSteps());
+
+    startSteps();
+
+    ProductScreen.do.clickQuotationButton();
+    ProductScreen.do.downPaymentFirstOrder();
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.do.clickNextOrder();
+    ProductScreen.do.clickRefund();
+    // Filter should be automatically 'Paid'.
+    TicketScreen.check.filterIs('Paid');
+    TicketScreen.do.selectOrder('-0001');
+    TicketScreen.do.clickOrderline('Down Payment');
+    TicketScreen.do.pressNumpad('1');
+    TicketScreen.do.confirmRefund();
+    ProductScreen.do.clickPayButton();
+    PaymentScreen.do.clickPaymentMethod('Cash');
+    PaymentScreen.do.clickValidate();
+    ReceiptScreen.do.clickNextOrder();
+
+    Tour.register('PosRefundDownpayment', { test: true, url: '/pos/ui' }, getSteps());
+});
+;
+
+/***************************************************
+*  Filepath: /auth_totp/static/tests/totp_flow.js  *
+*  Lines: 339                                      *
+***************************************************/
+odoo.define('auth_totp.tours', function(require) {
+"use strict";
+
+const tour = require('web_tour.tour');
+const ajax = require('web.ajax');
+
+function openRoot() {
+    return [{
+        content: "return to client root to avoid race condition",
+        trigger: 'body',
+        run() {
+            $('body').addClass('wait');
+            window.location = '/web';
+        }
+    }, {
+        content: "wait for client reload",
+        trigger: 'body:not(.wait)',
+        run() {}
+    }];
+}
+function openUserProfileAtSecurityTab() {
+    return [{
+        content: 'Open user account menu',
+        trigger: '.o_user_menu .oe_topbar_name',
+        run: 'click',
+    }, {
+        content: "Open preferences / profile screen",
+        trigger: '[data-menu=settings]',
+        run: 'click',
+    }, {
+        content: "Switch to security tab",
+        trigger: 'a[role=tab]:contains("Account Security")',
+        run: 'click',
+    }];
+}
+
+/**
+ * Checks that the TOTP button is in the specified state (true = enabled =
+ * can disable, false = disabled = can enable), then closes the profile dialog
+ * if it's one (= hr not installed).
+ *
+ * If no totp state is provided, just checks that the toggle exists.
+ */
+function closeProfileDialog({content, totp_state}) {
+    let trigger;
+    switch (totp_state) {
+    case true: trigger = 'button[name=action_totp_disable]'; break;
+    case false: trigger = 'button[name=action_totp_enable_wizard]'; break;
+    case undefined: trigger = 'button.o_auth_2fa_btn'; break;
+    default: throw new Error(`Invalid totp state ${totp_state}`)
+    }
+
+    return [{
+        content,
+        trigger,
+        run() {
+            const $modal = this.$anchor.parents('.o_dialog_container');
+            if ($modal.length) {
+                $modal.find('button[name=preference_cancel]').click()
+            }
+        }
+    }, {
+        trigger: 'body',
+        async run() {
+            while (document.querySelector('.o_dialog_container .o_dialog')) {
+                await Promise.resolve();
+            }
+            this.$anchor.addClass('dialog-closed');
+        },
+    }, {
+        trigger: 'body.dialog-closed',
+        run() {},
+    }];
+}
+
+tour.register('totp_tour_setup', {
+    test: true,
+    url: '/web'
+}, [...openUserProfileAtSecurityTab(), {
+    content: "Open totp wizard",
+    trigger: 'button[name=action_totp_enable_wizard]',
+}, {
+    content: "Check that we have to enter enhanced security mode and input password",
+    extra_trigger: 'div:contains("enter your password")',
+    trigger: '[name=password] input',
+    run: 'text demo',
+}, {
+    content: "Confirm",
+    trigger: "button:contains(Confirm Password)",
+}, {
+    content: "Check the wizard has opened",
+    trigger: 'li:contains("When requested to do so")',
+    run() {}
+}, {
+    content: "Get secret from collapsed div",
+    trigger: 'a:contains("Cannot scan it?")',
+    async run(helpers) {
+        const $secret = this.$anchor.closest('div').find('[name=secret] span:first-child');
+        const $copyBtn = $secret.find('button');
+        $copyBtn.remove();
+        const token = await ajax.jsonRpc('/totphook', 'call', {
+            secret: $secret.text()
+        });
+        helpers.text(token, '[name=code] input');
+        helpers.click('button.btn-primary:contains(Activate)');
+        $('body').addClass('got-token')
+    }
+}, {
+    content: 'wait for rpc',
+    trigger: 'body.got-token',
+    run() {}
+},
+...openRoot(),
+...openUserProfileAtSecurityTab(),
+...closeProfileDialog({
+    content: "Check that the button has changed",
+    totp_state: true,
+}),
+]);
+
+tour.register('totp_login_enabled', {
+    test: true,
+    url: '/'
+}, [{
+    content: "check that we're on the login page or go to it",
+    trigger: 'input#login, a:contains(Sign in)'
+}, {
+    content: "input login",
+    trigger: 'input#login',
+    run: 'text demo',
+}, {
+    content: 'input password',
+    trigger: 'input#password',
+    run: 'text demo',
+}, {
+    content: "click da button",
+    trigger: 'button:contains("Log in")',
+}, {
+    content: "expect totp screen",
+    trigger: 'label:contains(Authentication Code)',
+}, {
+    content: "input code",
+    trigger: 'input[name=totp_token]',
+    async run(helpers) {
+        // TODO: if tours are ever async-aware the click should get moved out,
+        //       but currently there's no great way to make the tour wait until
+        //       we've retrieved and set the token: `:empty()` is aboutthe text
+        //       content of the HTML element, not the JS value property. We
+        //       could set a class but that's really no better than
+        //       procedurally clicking the button after we've set the input.
+        const token = await ajax.jsonRpc('/totphook', 'call', {});
+        helpers.text(token);
+        helpers.click('button:contains("Log in")');
+    }
+}, {
+    content: "check we're logged in",
+    trigger: ".o_user_menu .oe_topbar_name",
+    run() {}
+}]);
+
+tour.register('totp_login_device', {
+    test: true,
+    url: '/'
+}, [{
+    content: "check that we're on the login page or go to it",
+    trigger: 'input#login, a:contains(Sign in)'
+}, {
+    content: "input login",
+    trigger: 'input#login',
+    run: 'text demo',
+}, {
+    content: 'input password',
+    trigger: 'input#password',
+    run: 'text demo',
+}, {
+    content: "click da button",
+    trigger: 'button:contains("Log in")',
+}, {
+    content: "expect totp screen",
+    trigger: 'label:contains(Authentication Code)',
+}, {
+    content: "check remember device box",
+    trigger: 'label[for=switch-remember]',
+}, {
+    content: "input code",
+    trigger: 'input[name=totp_token]',
+    async run(helpers) {
+        const token = await ajax.jsonRpc('/totphook', 'call', {})
+        helpers.text(token);
+        helpers.click('button:contains("Log in")');
+    }
+}, {
+    content: "check we're logged in",
+    trigger: ".o_user_menu .oe_topbar_name",
+    run: 'click',
+}, {
+    content: "click the Log out button",
+    trigger: '.dropdown-item[data-menu=logout]',
+}, {
+    content: "check that we're back on the login page or go to it",
+    trigger: 'input#login, a:contains(Log in)'
+}, {
+    content: "input login again",
+    trigger: 'input#login',
+    run: 'text demo',
+}, {
+    content: 'input password again',
+    trigger: 'input#password',
+    run: 'text demo',
+}, {
+    content: "click da button again",
+    trigger: 'button:contains("Log in")',
+},  {
+    content: "check we're logged in without 2FA",
+    trigger: ".o_user_menu .oe_topbar_name",
+    run() {}
+},
+// now go and disable two-factor authentication would be annoying to do in a separate tour
+// because we'd need to login & totp again as HttpCase.authenticate can't
+// succeed w/ totp enabled
+...openUserProfileAtSecurityTab(),
+{
+    content: "Open totp wizard",
+    trigger: 'button[name=action_totp_disable]',
+}, {
+    content: "Check that we have to enter enhanced security mode and input password",
+    extra_trigger: 'div:contains("enter your password")',
+    trigger: '[name=password] input',
+    run: 'text demo',
+}, {
+    content: "Confirm",
+    trigger: "button:contains(Confirm Password)",
+},
+...openRoot(),
+...openUserProfileAtSecurityTab(),
+...closeProfileDialog({
+    content: "Check that the button has changed",
+    totp_state: false
+}),
+]);
+
+tour.register('totp_login_disabled', {
+    test: true,
+    url: '/'
+}, [{
+    content: "check that we're on the login page or go to it",
+    trigger: 'input#login, a:contains(Sign in)'
+}, {
+    content: "input login",
+    trigger: 'input#login',
+    run: 'text demo',
+}, {
+    content: 'input password',
+    trigger: 'input#password',
+    run: 'text demo',
+}, {
+    content: "click da button",
+    trigger: 'button:contains("Log in")',
+},
+// normally we'd end the tour here as it's all we care about but there are a
+// bunch of ongoing queries from the loading of the web client which cause
+// issues, so go and open the preferences / profile screen to make sure
+// everything settles down
+...openUserProfileAtSecurityTab(),
+// close the dialog if that makes sense
+...closeProfileDialog({})
+]);
+
+const columns = {};
+tour.register('totp_admin_disables', {
+    test: true,
+    url: '/web'
+}, [tour.stepUtils.showAppsMenuItem(), {
+    content: 'Go to settings',
+    trigger: '[data-menu-xmlid="base.menu_administration"]'
+}, {
+    content: 'Wait for page',
+    trigger: '.o_menu_brand:contains("Settings")',
+    run() {}
+}, {
+    content: "Open Users menu",
+    trigger: '[data-menu-xmlid="base.menu_users"]'
+}, {
+    content: "Open Users view",
+    trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
+    run(helpers) {
+        // funny story: the users view we're trying to reach, sometimes we're
+        // already there, but if we re-click the next step executes before the
+        // action has the time to re-load, the one after that doesn't, and our
+        // selection get discarded by the action reloading, so here try to
+        // see if we're already on the users action through the breadcrumb and
+        // just close the menu if so
+        const $crumb = $('.breadcrumb');
+        if ($crumb.text().indexOf('Users') === -1) {
+            // on general settings page, click menu
+            helpers.click();
+        } else {
+            // else close menu
+            helpers.click($('[data-menu-xmlid="base.menu_users"]'));
+        }
+    }
+}, {
+    content: "Find Demo User",
+    trigger: 'td.o_data_cell:contains("demo")',
+    run(helpers) {
+        const $titles = this.$anchor.closest('table').find('tr:first th');
+        for (let i=0; i<$titles.length; ++i) {
+            columns[$titles[i].getAttribute('data-name')] = i;
+        }
+        const $row = this.$anchor.closest('tr');
+        const sel = $row.find('.o_list_record_selector input[type=checkbox]');
+        helpers.click(sel);
+    }
+}, {
+    content: "Open Actions menu",
+    trigger: 'button.dropdown-toggle:contains("Action")'
+}, {
+    content: "Select totp remover",
+    trigger: 'span.dropdown-item:contains(Disable two-factor authentication)'
+}, { // enhanced security yo
+    content: "Check that we have to enter enhanced security mode & input password",
+    extra_trigger: 'div:contains("enter your password")',
+    trigger: '[name=password] input',
+    run: 'text admin',
+}, {
+    content: "Confirm",
+    trigger: "button:contains(Confirm Password)",
+}, {
+    content: "open the user's form",
+    trigger: "td.o_data_cell:contains(demo)",
+}, {
+    content: "go to Account security Tab",
+    trigger: "a.nav-link:contains(Account Security)",
+}, ...closeProfileDialog({
+    content: "check that demo user has been de-totp'd",
+    totp_state: false,
+}),
+])
+});
+;
+
+/********************************************************
+*  Filepath: /auth_totp_mail/static/tests/totp_flow.js  *
+*  Lines: 75                                            *
+********************************************************/
+odoo.define('auth_totp_mail.tours', function(require) {
+"use strict";
+
+const tour = require('web_tour.tour');
+
+function openAccountSettingsTab() {
+    return [{
+        content: 'Go to settings',
+        trigger: '[data-menu-xmlid="base.menu_administration"]'
+    }, {
+        content: 'Wait for page',
+        trigger: '.o_menu_brand:contains("Settings")',
+        run: () => {}
+    }, {
+        content: "Open Users menu",
+        trigger: '[data-menu-xmlid="base.menu_users"]'
+    }, {
+        content: "Open Users view",
+        trigger: '[data-menu-xmlid="base.menu_action_res_users"]',
+        run: function (helpers) {
+            // funny story: the users view we're trying to reach, sometimes we're
+            // already there, but if we re-click the next step executes before the
+            // action has the time to re-load, the one after that doesn't, and our
+            // selection get discarded by the action reloading, so here try to
+            // see if we're already on the users action through the breadcrumb and
+            // just close the menu if so
+            const $crumb = $('.breadcrumb');
+            if ($crumb.text().indexOf('Users') === -1) {
+                // on general settings page, click menu
+                helpers.click();
+            } else {
+                // else close menu
+                helpers.click($('[data-menu-xmlid="base.menu_users"]'));
+            }
+        }
+    }];
+}
+
+tour.register('totp_admin_self_invite', {
+    test: true,
+    url: '/web'
+}, [tour.stepUtils.showAppsMenuItem(), ...openAccountSettingsTab(), {
+    content: "open the user's form",
+    trigger: "td.o_data_cell:contains(admin)",
+}, {
+    content: "go to Account security Tab",
+    trigger: "a.nav-link:contains(Account Security)",
+}, {
+    content: "check that user cannot invite themselves to use 2FA.",
+    trigger: "body",
+    run: function () {
+        const inviteBtn = $('button:contains(Invite to use 2FA)')[0];
+        if (!inviteBtn) {
+            $('body').addClass('CannotInviteYourself');
+        }
+    }
+}, {
+    content: "check that user cannot invite themself.",
+    trigger: "body.CannotInviteYourself"
+}]);
+
+tour.register('totp_admin_invite', {
+    test: true,
+    url: '/web'
+}, [tour.stepUtils.showAppsMenuItem(), ...openAccountSettingsTab(), {
+    content: "open the user's form",
+    trigger: "td.o_data_cell:contains(demo)",
+}, {
+    content: "go to Account security Tab",
+    trigger: "a.nav-link:contains(Account Security)",
+}, {
+    content: "check that demo user can be invited to use 2FA.",
+    trigger: "button:contains(Invite to use 2FA)",
+}]);
+
+});;
+
+/************************************************************
+*  Filepath: /auth_totp_portal/static/tests/totp_portal.js  *
+*  Lines: 124                                               *
+************************************************************/
+odoo.define('auth_totp_portal.tours', function(require) {
+"use strict";
+
+const tour = require('web_tour.tour');
+const ajax = require('web.ajax');
+
+tour.register('totportal_tour_setup', {
+    test: true,
+    url: '/my/security'
+}, [{
+    content: "Open totp wizard",
+    trigger: 'button#auth_totp_portal_enable',
+}, {
+    content: "Check that we have to enter enhanced security mode",
+    trigger: 'div:contains("enter your password")',
+    run: () => {},
+}, {
+    content: "Input password",
+    trigger: '[name=password]',
+    run: 'text portal', // FIXME: better way to do this?
+}, {
+    content: "Confirm",
+    trigger: "button:contains(Confirm Password)",
+}, {
+    content: "Check the wizard has opened",
+    trigger: 'li:contains("scan the barcode below")',
+    run: () => {}
+}, {
+    content: "Get secret from collapsed div",
+    trigger: 'a:contains("Cannot scan it?")',
+    run: async function(helpers) {
+        const secret = this.$anchor.closest('div').find('span[name="secret"]').text();
+        const token = await ajax.jsonRpc('/totphook', 'call', {
+            secret
+        });
+        helpers._text(helpers._get_action_values('input[name=code]'), token);
+        helpers._click(helpers._get_action_values('button.btn-primary:contains(Activate)'));
+    }
+}, {
+    content: "Check that the button has changed",
+    trigger: 'button:contains(Disable two-factor authentication)',
+    run: () => {}
+}]);
+
+tour.register('totportal_login_enabled', {
+    test: true,
+    url: '/'
+}, [{
+    content: "check that we're on the login page or go to it",
+    trigger: 'input#login, a:contains(Sign in)'
+}, {
+    content: "input login",
+    trigger: 'input#login',
+    run: 'text portal',
+}, {
+    content: 'input password',
+    trigger: 'input#password',
+    run: 'text portal',
+}, {
+    content: "click da button",
+    trigger: 'button:contains("Log in")',
+}, {
+    content: "expect totp screen",
+    trigger: 'label:contains(Authentication Code)',
+}, {
+    content: "input code",
+    trigger: 'input[name=totp_token]',
+    run: async function (helpers) {
+        const token = await ajax.jsonRpc('/totphook', 'call', {});
+        helpers._text(helpers._get_action_values(), token);
+        // FIXME: is there a way to put the button as its own step trigger without
+        //        the tour straight blowing through and not waiting for this?
+        helpers._click(helpers._get_action_values('button:contains("Log in")'));
+    }
+}, {
+    content: "check we're logged in",
+    trigger: "h3:contains(Documents)",
+    run: () => {}
+}, {
+    content: "go back to security",
+    trigger: "a:contains(Security)",
+},{
+    content: "Open totp wizard",
+    trigger: 'button#auth_totp_portal_disable',
+}, {
+    content: "Check that we have to enter enhanced security mode",
+    trigger: 'div:contains("enter your password")',
+    run: () => {},
+}, {
+    content: "Input password",
+    trigger: '[name=password]',
+    run: 'text portal', // FIXME: better way to do this?
+}, {
+    content: "Confirm",
+    trigger: "button:contains(Confirm Password)",
+}, {
+    content: "Check that the button has changed",
+    trigger: 'button:contains(Enable two-factor authentication)',
+    run: () => {}
+}]);
+
+tour.register('totportal_login_disabled', {
+    test: true,
+    url: '/'
+}, [{
+    content: "check that we're on the login page or go to it",
+    trigger: 'input#login, a:contains(Sign in)'
+}, {
+    content: "input login",
+    trigger: 'input#login',
+    run: 'text portal',
+}, {
+    content: 'input password',
+    trigger: 'input#password',
+    run: 'text portal',
+}, {
+    content: "click da button",
+    trigger: 'button:contains("Log in")',
+}, {
+    content: "check we're logged in",
+    trigger: "h3:contains(Documents)",
+    run: () => {}
+}]);
+});
+;
+
+/******************************************************************************************
+*  Filepath: /purchase_product_matrix/static/tests/tours/purchase_product_matrix_tour.js  *
+*  Lines: 82                                                                              *
+******************************************************************************************/
+odoo.define('purchase_product_matrix.purchase_matrix_tour', function (require) {
+"use strict";
+
+var tour = require('web_tour.tour');
+
+tour.register('purchase_matrix_tour', {
+    url: "/web",
+    test: true,
+}, [tour.stepUtils.showAppsMenuItem(), {
+    trigger: '.o_app[data-menu-xmlid="purchase.menu_purchase_root"]',
+}, {
+    trigger: ".o_list_button_add",
+    extra_trigger: ".o_purchase_order"
+}, {
+    trigger: '.o_required_modifier[name=partner_id] input',
+    run: 'text Agrolait',
+}, {
+    trigger: '.ui-menu-item > a:contains("Agrolait")',
+    auto: true,
+}, {
+    trigger: "a:contains('Add a product')"
+}, {
+    trigger: 'div[name="product_template_id"] input',
+    run: "text Matrix",
+}, {
+    trigger: 'ul.ui-autocomplete a:contains("Matrix")',
+}, {
+    trigger: '.o_product_variant_matrix',
+    run: function () {
+        // fill the whole matrix with 1's
+        $('.o_matrix_input').val(1);
+    }
+}, {
+    trigger: 'span:contains("Confirm")',
+    run: 'click'
+}, {
+    trigger: '.o_form_button_save',
+    run: 'click' // SAVE Sales Order.
+},
+// Open the matrix through the pencil button next to the product in line edit mode.
+{
+    trigger: 'span:contains("Matrix (PAV11, PAV22, PAV31)\nPA4: PAV41")',
+    extra_trigger: '.o_form_status_indicator_buttons.invisible', // wait for save to be finished
+}, {
+    trigger: '[name=product_template_id] button.fa-pencil', // edit the matrix
+}, {
+    trigger: '.o_product_variant_matrix',
+    run: function () {
+        // update some of the matrix values.
+        $('.o_matrix_input').slice(8, 16).val(4);
+    } // set the qty to 4 for half of the matrix products.
+}, {
+    trigger: 'span:contains("Confirm")',
+    run: 'click' // apply the matrix
+}, {
+    trigger: '.o_form_button_save',
+    extra_trigger: '.o_field_cell.o_data_cell.o_list_number:contains("4.00")',
+    run: 'click' // SAVE Sales Order, after matrix has been applied (extra_trigger).
+},
+// Ensures the matrix is opened with the values, when adding the same product.
+{
+    trigger: 'a:contains("Add a product")',
+    extra_trigger: '.o_form_status_indicator_buttons.invisible',
+}, {
+    trigger: 'div[name="product_template_id"] input',
+    run: 'text Matrix',
+}, {
+    trigger: 'ul.ui-autocomplete a:contains("Matrix")',
+}, {
+    trigger: 'input[value="4"]',
+    run: function () {
+        // update some values of the matrix
+        $("input[value='4']").slice(0, 4).val(8.2);
+    }
+}, {
+    trigger: 'span:contains("Confirm")',
+    run: 'click' // apply the matrix
+}, ...tour.stepUtils.saveForm({ extra_trigger: '.o_field_cell.o_data_cell.o_list_number:contains("8.20")' })
+]);
+
+
+});
+
+
+//# sourceMappingURL=/web/assets/199-03835d2/web.assets_tests.js.map

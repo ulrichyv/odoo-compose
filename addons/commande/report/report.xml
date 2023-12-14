@@ -1,0 +1,13 @@
+<odoo>
+
+        <report id="report_bon_de_commande" 
+        model="purchase.order.line" 
+        string="Bon de commande" 
+        name="purchase.report_purchaseorder" 
+        file="purchase.report_purchaseorder" 
+        report_type="qweb-pdf" 
+        print_report_name="Purchase Order" 
+        attachment_use="False"/>
+
+
+</odoo>

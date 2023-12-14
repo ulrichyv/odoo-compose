@@ -25,6 +25,9 @@
                 <xpath expr="//field[@name='uom_po_id']" position="after">
                    <field name="dosage"/>
                 </xpath>
+                 <xpath expr="//field[@name='dosage']" position="after">
+                   <field name="dci"/>
+                </xpath>
           
             </field>
       </record>    </data>
