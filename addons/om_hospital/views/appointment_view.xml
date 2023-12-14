@@ -69,43 +69,41 @@
                         </group>
                     </group>
                     <notebook>
-    <page string="Prescription" name="prescription">
-    <field name="medicament_line_ids">
-        <tree editable="bottom">
-            <field name="medicaments" />
-            <field name="qty"/>
-            <field name="reminder_value"/>
-            <field name="reminder_unit"/>
-            <field name="frequency"/>
-        </tree>
-    </field>
-    <form>
-        <group>
-            <group>
-               <field name="medicaments" />
-            </group>
-            <group>
+    <page string=" Prescription" name="prescription">
+        <field name="medicament_line_ids">
+            <tree editable="bottom">
+                <field name="medicaments"/>
                 <field name="qty"/>
-            </group>
-            <group>
                 <field name="reminder_value"/>
-            </group>
-            <group>
                 <field name="reminder_unit"/>
-            </group>
-            <group>
                 <field name="frequency"/>
+            </tree>
+        <form>
+            <group>
+                <group>
+                    <field name="medicaments"/>
+                </group>
+                <group>
+                    <field name="qty"/>
+                </group>
+                <group>
+                    <field name="reminder_value"/>
+                </group>
+                <group>
+                    <field name="reminder_unit"/>
+                </group>
+                <group>
+                    <field name="frequency"/>
+                </group>
             </group>
-        </group>
-    </form>
-    <button name="action_rende_vous" string="Create Reminders" type="object" class="oe_highlight"
-        attrs="{'invisible': ['|', ('medicament_line_ids', '=', False), ('medicament_line_ids', '==', [])],
-                'readonly': [('medicament_line_ids', '=', False)]}"/>
-    <button name="action_verifier" string="Verifier les produits"  
-    />
-</page>
-            
+        </form>
+       </field>
+  <button name="action_rende_vous" string="Create Reminders" type="object" class="oe_highlight"
+    attrs="{'invisible': ['|', ('medicament_line_ids', '=', False), ('medicament_line_ids', '==', [])],
+            'readonly': [('medicament_line_ids', '=', False)]}"/>
+    </page>
 
+    
     <page string="Medicine" name="medicine">
         <field name="prescription_line_ids">
             <tree editable="bottom">

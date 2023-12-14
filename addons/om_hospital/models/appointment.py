@@ -34,8 +34,9 @@ class HospitalAppointment(models.Model):
                                             string="medicament lines")
     def action_rende_vous(self):
       for medicament_line in self.medicament_line_ids:
-         medicament_line.rende_vous()
-   
+           medicament_line.verifier()
+           medicament_line.rende_vous()
+      
     def action_confirm(self):
         self.state = 'confirm'
 
@@ -96,9 +97,14 @@ class AppointmentMedicament(models.Model):
     ], string="periode")
     appointment_id = fields.Many2one('hospital.appointment', string="Appointment")
     frequency = fields.Integer(string="Frequence")
-    
+    def verifier(self):
+         produit = self.env['product.template'].search([('display_name', '=', self.medicaments)])
+         if produit:
+           return True
+         else:
+          return False
         
-
+    
     def rende_vous(self):
         if self.medicaments and self.reminder_value and self.reminder_unit and self.frequency:
             current_time = datetime.datetime.now()
