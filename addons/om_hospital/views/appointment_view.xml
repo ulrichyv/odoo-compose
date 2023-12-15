@@ -72,7 +72,7 @@
     <page string=" Prescription" name="prescription">
         <field name="medicament_line_ids">
             <tree editable="bottom">
-                <field name="medicaments"/>
+                <field name="product_id"/>
                 <field name="qty"/>
                 <field name="reminder_value"/>
                 <field name="reminder_unit"/>
@@ -81,7 +81,7 @@
         <form>
             <group>
                 <group>
-                    <field name="medicaments"/>
+                    <field name="product_id"/>
                 </group>
                 <group>
                     <field name="qty"/>
@@ -98,7 +98,7 @@
             </group>
         </form>
        </field>
-  <button name="action_rende_vous" string="Create Reminders" type="object" class="oe_highlight"
+  <button name="action_rende_vous" string="Créer des rappels" type="object" class="oe_highlight"
     attrs="{'invisible': ['|', ('medicament_line_ids', '=', False), ('medicament_line_ids', '==', [])],
             'readonly': [('medicament_line_ids', '=', False)]}"/>
     </page>

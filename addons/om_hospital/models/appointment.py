@@ -34,7 +34,6 @@ class HospitalAppointment(models.Model):
                                             string="medicament lines")
     def action_rende_vous(self):
       for medicament_line in self.medicament_line_ids:
-           medicament_line.verifier()
            medicament_line.rende_vous()
       
     def action_confirm(self):
@@ -87,7 +86,7 @@ class AppointmentMedicament(models.Model):
     _name = "appointment.medicament.lines"
     _description = "Appointment Medicament"
 
-    medicaments = fields.Char(string="Medicament", required=True)
+    product_id = fields.Many2one('product.template', string="medicament", required=True)
     qty = fields.Integer(string="Quantity")
     reminder_value = fields.Integer(string="temps")
     reminder_unit = fields.Selection([
@@ -106,34 +105,34 @@ class AppointmentMedicament(models.Model):
         
     
     def rende_vous(self):
-        if self.medicaments and self.reminder_value and self.reminder_unit and self.frequency:
-            current_time = datetime.datetime.now()
-            
-            if self.reminder_unit == 'days':
-                reminder_duration = datetime.timedelta(days=self.reminder_value)
-            elif self.reminder_unit == 'weeks':
-                reminder_duration = datetime.timedelta(weeks=self.reminder_value)
-            elif self.reminder_unit == 'months':
-                reminder_duration = datetime.timedelta(days=self.reminder_value * 30)
-            
-            reminder_time = current_time
-            frequence = self.frequency
-            
-            for i in range(frequence):
-                reminder_time += reminder_duration
-                
-                message = self.env['mail.message'].create({
-                    'subject': 'Médicaments à prendre',
-                    'body': '<p>Vous devez prendre les médicaments : {}</p>'.format(self.medicaments),
-                    'date': reminder_time,
-                })
-                
-                calendar = self.env['calendar.event'].create({
-                    'name': 'Patient: ' + self.appointment_id.patient_id.name,
-                    'description': 'Prescription: ' + self.medicaments,
-                    'start': reminder_time,
-                    'stop': reminder_time + datetime.timedelta(hours=2),
-                })
+      if self.product_id and self.reminder_value and self.reminder_unit and self.frequency:
+        current_time = datetime.datetime.now()
+
+        if self.reminder_unit == 'days':
+            reminder_duration = datetime.timedelta(days=self.reminder_value)
+        elif self.reminder_unit == 'weeks':
+            reminder_duration = datetime.timedelta(weeks=self.reminder_value)
+        elif self.reminder_unit == 'months':
+            reminder_duration = datetime.timedelta(days=self.reminder_value * 30)
+
+        reminder_time = current_time
+        frequence = self.frequency
+
+        for i in range(frequence):
+            reminder_time += reminder_duration
+
+            message = self.env['mail.message'].create({
+                'subject': 'Médicaments à prendre',
+                'body': '<p>Vous devez prendre les médicaments : {}</p>'.format(self.product_id.name),
+                'date': reminder_time,
+            })
+
+            calendar = self.env['calendar.event'].create({
+                'name': 'Patient: ' + self.appointment_id.patient_id.name,
+                'description': 'Prescription: ' + self.product_id.name,
+                'start': reminder_time,
+                'stop': reminder_time + datetime.timedelta(hours=2),
+            })
        
    
 

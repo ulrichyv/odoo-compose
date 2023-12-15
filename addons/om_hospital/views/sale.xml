@@ -22,6 +22,9 @@
             </xpath>
         </field>
     </record>
+     
+    
+    
 
     <menuitem id="menu_sale_appointment"
               name="Appointments"
