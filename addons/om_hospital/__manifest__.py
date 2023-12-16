@@ -17,10 +17,7 @@
     'data': [
         'security/ir.model.access.csv',
         'data/data.xml',
-        # 'data/slide_data_v12.xml',
-        # 'data/slide_data_v13.xml',
-        # 'data/slide_data_v14.xml',
-        # 'data/slide_data_v15.xml',
+       
        'wizard/create_appointment_view.xml',
        'wizard/search_appointment_view.xml',
         'views/patient_view.xml',
@@ -34,7 +31,6 @@
         'report/report.xml'
     ],
    
-    'images': ['static/description/banner.gif'],
     'installable': True,
     'application': True,
     'auto_install': False,
