@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from odoo import api, fields, models
 
 
@@ -8,25 +6,32 @@ class SaleOrder(models.Model):
 
     sale_description = fields.Char(string='Sale Description')
     order_line_ids = fields.One2many('sale.order.line', 'order_id', string="Produits")
-
     def action_alter(self):
         produits_alternatifs = []
         for order_line in self.order_line_ids:
             produit = order_line.alternative()
             if produit:
                 produits_alternatifs.append(produit)
-        if produits_alternatifs:
-            return produits_alternatifs
-        else:
-            return "Aucun produit alternatif trouvé"
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Recommended Products',
+            'res_model': 'product.product',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', [p.id for p in produits_alternatifs])],
+        }
 
 
 class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
     def alternative(self):
-        produit = self.env['product.template'].search([('dci', '=', self.product_id.dci)])
-        if produit:
-            return produit
-        else:
+        stock_quant = self.env['stock.quant'].search([('product_id', '=', self.product_id.id)])
+        if stock_quant:
             return False
+        else:
+            produit = self.env['product.product'].search([('dci', '=', self.product_id.dci)])
+            if produit:
+                return produit
+            else:
+                return False

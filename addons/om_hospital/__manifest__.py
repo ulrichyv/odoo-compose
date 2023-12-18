@@ -13,6 +13,7 @@
         'mail',
         'website_slides',
         'hr',
+        
     ],
     'data': [
         'security/ir.model.access.csv',
